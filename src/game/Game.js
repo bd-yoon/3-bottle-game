@@ -41,12 +41,29 @@ export class Game {
     const w = this.canvas.width
     const h = this.canvas.height
 
-    // ── Bases ────────────────────────────────────────────────────────────────
-    const baseRadius = Math.min(w, h) * 0.12
+    // ── 정삼각형 베이스 좌표 계산 ─────────────────────────────────────────────
+    // 세 꼭짓점이 픽셀 거리상 동일한 정삼각형
+    const cx = w / 2
+    const cy = h * 0.42
+    const R = Math.min(w * 0.42, h * 0.27)   // 중심 → 꼭짓점 거리(px)
+    const SIN60 = Math.sin(Math.PI / 3)       // ≈ 0.866
+    const COS60 = 0.5
 
+    const baseRadius = R * 0.32
+
+    // Capi(플레이어): 하단 중앙
+    const pBx = cx
+    const pBy = cy + R
+    // Panda(AI1): 좌상단
+    const a1Bx = cx - R * SIN60
+    const a1By = cy - R * COS60
+    // Golden(AI2): 우상단
+    const a2Bx = cx + R * SIN60
+    const a2By = cy - R * COS60
+
+    // ── Bases ────────────────────────────────────────────────────────────────
     const playerBase = new Base({
-      x: w / 2,
-      y: h * 0.78,
+      x: pBx, y: pBy,
       radius: baseRadius,
       owner: 'player',
       color: '#f9a8d4',
@@ -54,8 +71,7 @@ export class Game {
     })
 
     const ai1Base = new Base({
-      x: w * 0.22,
-      y: h * 0.14,
+      x: a1Bx, y: a1By,
       radius: baseRadius,
       owner: 'ai1',
       color: '#a5b4fc',
@@ -63,8 +79,7 @@ export class Game {
     })
 
     const ai2Base = new Base({
-      x: w * 0.78,
-      y: h * 0.14,
+      x: a2Bx, y: a2By,
       radius: baseRadius,
       owner: 'ai2',
       color: '#fde68a',
@@ -75,8 +90,7 @@ export class Game {
     const bounds = { w, h }
 
     this.playerEntity = new Player({
-      x: w / 2,
-      y: h * 0.68,
+      x: pBx, y: pBy,
       type: 'player',
       base: playerBase,
       color: '#f9a8d4',
@@ -86,8 +100,7 @@ export class Game {
     this.playerEntity._bounds = bounds
 
     const ai1 = new AIPlayer({
-      x: w * 0.22,
-      y: h * 0.25,
+      x: a1Bx, y: a1By,
       type: 'ai1',
       base: ai1Base,
       color: '#a5b4fc',
@@ -97,8 +110,7 @@ export class Game {
     ai1._bounds = bounds
 
     const ai2 = new AIPlayer({
-      x: w * 0.78,
-      y: h * 0.25,
+      x: a2Bx, y: a2By,
       type: 'ai2',
       base: ai2Base,
       color: '#fde68a',
@@ -112,8 +124,6 @@ export class Game {
 
     // ── Bottles ──────────────────────────────────────────────────────────────
     this.bottles = []
-    const cx = w / 2
-    const cy = h * 0.44
     const spreadR = Math.min(w, h) * 0.1
     for (let i = 0; i < BOTTLE_COUNT; i++) {
       const angle = (i / BOTTLE_COUNT) * Math.PI * 2

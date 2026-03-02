@@ -3,7 +3,7 @@ import { distance } from '../../utils/math.js'
 export const PLAYER_RADIUS = 22
 export const PICKUP_RADIUS = 36
 export const BASE_DROP_RADIUS = 60
-export const SPEED = 160   // px per second
+export const SPEED = 240   // px per second (160 * 1.5)
 
 export class Player {
   constructor({ x, y, type, base, color, label, emoji }) {
