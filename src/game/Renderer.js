@@ -1,18 +1,35 @@
-// ─── Renderer ─────────────────────────────────────────────────────────────────
-// Responsible for all canvas drawing. Pure visual layer – no game logic here.
+// ─── Renderer – Pixel Art Style ───────────────────────────────────────────────
+
+const C = {
+  sky1:    '#5ec8ff', sky2:    '#9dd9ff', cloud:   '#f5faff',
+  grass1:  '#6bcc30', grass2:  '#50a020', grass3:  '#3c7818', grassHL: '#84e040',
+  trunk:   '#6b3a10', leaf1:   '#52cc28', leaf2:   '#38a018', leaf3:   '#286414',
+  black:   '#1a1a2e', white:   '#f0f5e8',
+  panelBg: '#0c1e10', panelHL: '#1e3820', panelSH: '#060e08',
+  gold:    '#fcd34d', green:   '#30c860',
+  aRed:    '#e83030', aRedDk:  '#901818', aRedLt:  '#ff5858',
+  aGreen:  '#38a018', aStem:   '#5a3210',
+  capyBr:  '#b87c38', capyLt:  '#d4a060', capyDk:  '#785028',
+  pandaW:  '#e8e8e8', pandaB:  '#1a1a2e',
+  goldnYl: '#f0a020', goldnLt: '#f8c840', goldnDk: '#b07818',
+  pink:    '#f47890',
+  pPlayer: '#f9a8d4', pAI1:    '#a5b4fc', pAI2:    '#fde68a',
+}
 
 export class Renderer {
   constructor(canvas) {
     this.canvas = canvas
     this.ctx = canvas.getContext('2d')
-    // Pre-generate stable tree positions (seed with fixed values)
     this._trees = null
+    this._clouds = null
   }
 
   resize(w, h) {
     this.canvas.width = w
     this.canvas.height = h
+    this.ctx.imageSmoothingEnabled = false
     this._trees = this._generateTrees(w, h)
+    this._clouds = this._generateClouds(w, h)
   }
 
   // ── Entry points ────────────────────────────────────────────────────────────
@@ -20,11 +37,7 @@ export class Renderer {
   drawGame(state) {
     const w = this.canvas.width
     const h = this.canvas.height
-
-    this._clearBackground(w, h)
-    this._drawField(w, h)
-    this._drawTrees()
-
+    this._drawBg(w, h)
     for (const base of state.bases) this._drawBase(base)
     for (const apple of state.bottles) {
       if (apple.state === 'ground') this._drawApple(apple.x, apple.y, apple.radius)
@@ -33,317 +46,270 @@ export class Renderer {
       this._drawPlayer(player)
       if (player.carrying) this._drawAppleCarried(player)
     }
-
     this._drawHUD(state, w, h)
   }
 
   drawTitle(w, h, level) {
     const { ctx } = this
-    this._clearBackground(w, h)
-    this._drawField(w, h)
-    this._drawTrees()
-
-    // Title card
-    this._roundRect(ctx, w * 0.08, h * 0.15, w * 0.84, h * 0.58, 28,
-      'rgba(0,30,0,0.55)', 'rgba(100,200,100,0.35)')
+    this._drawBg(w, h)
+    this._panel(w * 0.06, h * 0.13, w * 0.88, h * 0.60)
 
     ctx.textAlign = 'center'
-    ctx.fillStyle = '#e8f5e9'
-    ctx.font = `bold ${Math.round(w * 0.085)}px sans-serif`
-    ctx.fillText('🍎 3 Apple Game', w / 2, h * 0.27)
+    ctx.fillStyle = C.gold
+    ctx.font = `bold ${Math.round(w * 0.09)}px 'Courier New', monospace`
+    ctx.fillText('3 APPLE', w / 2, h * 0.25)
+    ctx.fillStyle = C.white
+    ctx.font = `bold ${Math.round(w * 0.055)}px 'Courier New', monospace`
+    ctx.fillText('GAME', w / 2, h * 0.32)
 
-    // Level badge
-    this._drawLevelBadge(ctx, w / 2, h * 0.35, level, false)
+    this._levelBadge(w / 2, h * 0.385, level, false)
 
-    // Character preview row
     const chars = [
-      { emoji: '🐼', label: 'PANDA', color: '#a5b4fc' },
-      { emoji: '🦫', label: 'CAPI', color: '#f9a8d4' },
-      { emoji: '🐕', label: 'GOLDIE', color: '#fde68a' },
+      { type: 'ai1',    label: 'PANDA',  col: C.pAI1   },
+      { type: 'player', label: 'CAPI',   col: C.pPlayer },
+      { type: 'ai2',    label: 'GOLDIE', col: C.pAI2   },
     ]
-    const spacing = w / (chars.length + 1)
+    const sp = w / 4
     chars.forEach((c, i) => {
-      const cx = spacing * (i + 1)
-      const cy = h * 0.50
-
-      ctx.beginPath()
-      ctx.arc(cx, cy, 28, 0, Math.PI * 2)
-      ctx.fillStyle = c.color + '44'
-      ctx.fill()
-      ctx.strokeStyle = c.color
-      ctx.lineWidth = 2
-      ctx.stroke()
-
-      ctx.font = '30px serif'
+      const cx = sp * (i + 1)
+      const cy = h * 0.505
+      const r  = Math.round(w * 0.07)
+      this._pxFrame(cx - r - 3, cy - r - 3, (r + 3) * 2, (r + 3) * 2, c.col)
+      if (c.type === 'player')   this._drawCapybara(ctx, cx, cy, r, false)
+      else if (c.type === 'ai1') this._drawPanda(ctx, cx, cy, r, false)
+      else                       this._drawGolden(ctx, cx, cy, r, false)
       ctx.textAlign = 'center'
-      ctx.fillText(c.emoji, cx, cy + 10)
-
-      ctx.font = `bold ${Math.round(w * 0.028)}px sans-serif`
-      ctx.fillStyle = c.color
-      ctx.fillText(c.label, cx, cy + 46)
+      ctx.fillStyle = c.col
+      ctx.font = `bold ${Math.round(w * 0.026)}px 'Courier New', monospace`
+      ctx.fillText(c.label, cx, cy + r + 16)
     })
 
-    ctx.fillStyle = '#c8e6c9'
-    ctx.font = `${Math.round(w * 0.036)}px sans-serif`
-    ctx.fillText('먼저 3개 사과를 모으면 승리!', w / 2, h * 0.67)
+    ctx.fillStyle = '#a0d890'
+    ctx.font = `${Math.round(w * 0.030)}px 'Courier New', monospace`
+    ctx.textAlign = 'center'
+    ctx.fillText('COLLECT 3 APPLES TO WIN!', w / 2, h * 0.675)
 
-    this._drawButton(ctx, w / 2, h * 0.76, w * 0.55, 52, '게임 시작', '#2d6a4f')
+    this._btn(w / 2, h * 0.765, w * 0.62, 52, '> GAME START <', '#2a6e3a')
   }
 
-  // ── 승리 화면 ─────────────────────────────────────────────────────────────────
   drawWin(w, h, level) {
     const { ctx } = this
-    this._clearBackground(w, h)
-    this._drawField(w, h)
-    this._drawTrees()
-
-    ctx.fillStyle = 'rgba(0,0,0,0.45)'
+    this._drawBg(w, h)
+    ctx.fillStyle = 'rgba(0,10,0,0.55)'
     ctx.fillRect(0, 0, w, h)
-
-    this._roundRect(ctx, w * 0.07, h * 0.18, w * 0.86, h * 0.62, 28,
-      'rgba(0,40,0,0.92)', 'rgba(100,220,100,0.4)')
+    this._panel(w * 0.06, h * 0.18, w * 0.88, h * 0.58)
 
     ctx.textAlign = 'center'
+    ctx.fillStyle = C.gold
+    ctx.font = `bold ${Math.round(w * 0.12)}px 'Courier New', monospace`
+    ctx.fillText('CLEAR!', w / 2, h * 0.31)
+    ctx.fillStyle = C.green
+    ctx.font = `bold ${Math.round(w * 0.040)}px 'Courier New', monospace`
+    ctx.fillText(`LEVEL ${level} COMPLETE`, w / 2, h * 0.41)
 
-    ctx.font = `bold ${Math.round(w * 0.11)}px sans-serif`
-    ctx.fillStyle = '#fde68a'
-    ctx.fillText('🎉 클리어!', w / 2, h * 0.32)
+    this._levelBadge(w / 2, h * 0.50, level + 1, true)
 
-    // 레벨 완료 표시
-    ctx.font = `${Math.round(w * 0.042)}px sans-serif`
-    ctx.fillStyle = '#c8e6c9'
-    ctx.fillText(`레벨 ${level} 완료!`, w / 2, h * 0.42)
+    ctx.fillStyle = '#80ff60'
+    ctx.font = `${Math.round(w * 0.030)}px 'Courier New', monospace`
+    ctx.fillText('DIFFICULTY UP!', w / 2, h * 0.595)
 
-    // 다음 레벨 프리뷰
-    this._drawLevelBadge(ctx, w / 2, h * 0.52, level + 1, true)
-
-    ctx.font = `${Math.round(w * 0.034)}px sans-serif`
-    ctx.fillStyle = '#86efac'
-    ctx.fillText('난이도가 올라갔어요!', w / 2, h * 0.62)
-
-    this._drawButton(ctx, w / 2, h * 0.74, w * 0.58, 56, `레벨 ${level + 1} 시작 →`, '#15803d')
+    this._btn(w / 2, h * 0.725, w * 0.70, 54, `> LEVEL ${level + 1} START`, '#1a6a2e')
   }
 
-  // ── 패배 화면 ─────────────────────────────────────────────────────────────────
   drawLose(w, h, level, winner, adLoading) {
     const { ctx } = this
-    this._clearBackground(w, h)
-    this._drawField(w, h)
-    this._drawTrees()
-
-    ctx.fillStyle = 'rgba(0,0,0,0.6)'
+    this._drawBg(w, h)
+    ctx.fillStyle = 'rgba(0,0,0,0.60)'
     ctx.fillRect(0, 0, w, h)
-
-    this._roundRect(ctx, w * 0.07, h * 0.18, w * 0.86, h * 0.68, 28,
-      'rgba(20,0,0,0.92)', 'rgba(200,100,100,0.3)')
+    this._panel(w * 0.06, h * 0.15, w * 0.88, h * 0.70)
 
     ctx.textAlign = 'center'
+    ctx.fillStyle = '#ff5050'
+    ctx.font = `bold ${Math.round(w * 0.095)}px 'Courier New', monospace`
+    ctx.fillText('GAME OVER', w / 2, h * 0.265)
 
-    ctx.font = `bold ${Math.round(w * 0.1)}px sans-serif`
-    ctx.fillStyle = '#fca5a5'
-    ctx.fillText('😢 패배...', w / 2, h * 0.30)
+    const wx = w / 2, wy = h * 0.365, wr = Math.round(w * 0.075)
+    if (winner.type === 'player')   this._drawCapybara(ctx, wx, wy, wr, false)
+    else if (winner.type === 'ai1') this._drawPanda(ctx, wx, wy, wr, false)
+    else                            this._drawGolden(ctx, wx, wy, wr, false)
 
-    ctx.font = `36px serif`
-    ctx.fillStyle = '#fff'
-    ctx.fillText(winner.emoji, w / 2, h * 0.40)
+    ctx.fillStyle = winner.color || C.white
+    ctx.font = `bold ${Math.round(w * 0.036)}px 'Courier New', monospace`
+    ctx.fillText(`${winner.label} WINS!`, w / 2, h * 0.465)
 
-    ctx.font = `${Math.round(w * 0.038)}px sans-serif`
-    ctx.fillStyle = '#fecaca'
-    ctx.fillText(`${winner.label}이 사과 3개를 먼저 모았어요!`, w / 2, h * 0.49)
+    this._levelBadge(w / 2, h * 0.530, level, false)
 
-    // 현재 레벨 표시
-    this._drawLevelBadge(ctx, w / 2, h * 0.56, level, false)
-
-    // 광고 버튼
     if (adLoading) {
-      this._drawButton(ctx, w / 2, h * 0.68, w * 0.75, 52, '광고 로딩 중...', '#6b7280')
+      this._btn(w / 2, h * 0.650, w * 0.80, 52, 'LOADING...', '#555')
     } else {
-      this._drawButton(ctx, w / 2, h * 0.68, w * 0.75, 52, '📺  광고 보고 다시 도전', '#b45309')
+      this._btn(w / 2, h * 0.650, w * 0.80, 52, '> WATCH AD & RETRY', '#a04810')
     }
-
-    // 처음부터 버튼
-    this._drawButton(ctx, w / 2, h * 0.79, w * 0.55, 44, '처음부터 (레벨 1)', '#374151')
+    this._btn(w / 2, h * 0.765, w * 0.62, 44, '> RESTART (LV.1)', '#3a3a60')
 
     if (adLoading) {
-      // 로딩 오버레이 힌트
-      ctx.fillStyle = 'rgba(0,0,0,0.3)'
+      ctx.fillStyle = 'rgba(0,0,0,0.45)'
       ctx.fillRect(0, 0, w, h)
-      ctx.fillStyle = '#fff'
-      ctx.font = `bold ${Math.round(w * 0.045)}px sans-serif`
-      ctx.fillText('광고 준비 중...', w / 2, h / 2)
+      ctx.fillStyle = C.white
+      ctx.font = `bold ${Math.round(w * 0.045)}px 'Courier New', monospace`
+      ctx.textAlign = 'center'
+      ctx.fillText('LOADING...', w / 2, h / 2)
     }
   }
 
-  // ── 레벨 배지 ─────────────────────────────────────────────────────────────────
-  _drawLevelBadge(ctx, cx, cy, level, isNext) {
-    const bw = 160
-    const bh = 40
-    const color = isNext ? '#15803d' : '#2d6a4f'
-    this._roundRect(ctx, cx - bw / 2, cy - bh / 2, bw, bh, 12,
-      color + 'cc', 'rgba(255,255,255,0.25)')
-    ctx.textAlign = 'center'
-    ctx.fillStyle = '#fff'
-    ctx.font = `bold 16px sans-serif`
-    const label = isNext ? `NEXT  Lv.${level}` : `Lv.${level}`
-    ctx.fillText(label, cx, cy + 6)
+  // ── Background ────────────────────────────────────────────────────────────
+
+  _drawBg(w, h) {
+    const { ctx } = this
+    // Sky
+    ctx.fillStyle = C.sky1
+    ctx.fillRect(0, 0, w, h * 0.58)
+    ctx.fillStyle = C.sky2
+    ctx.fillRect(0, h * 0.38, w, h * 0.22)
+
+    // Pixel clouds
+    if (this._clouds) {
+      for (const cl of this._clouds) this._pixelCloud(cl.x, cl.y, cl.s)
+    }
+
+    // Ground
+    ctx.fillStyle = C.grass1
+    ctx.fillRect(0, h * 0.56, w, h * 0.44)
+    // Grass highlight strip
+    ctx.fillStyle = C.grassHL
+    ctx.fillRect(0, h * 0.56, w, 3)
+    ctx.fillStyle = C.grass2
+    ctx.fillRect(0, h * 0.56 + 3, w, 3)
+
+    // Grass tufts (pixel pattern)
+    const gp = Math.max(3, Math.round(w / 65))
+    ctx.fillStyle = C.grass3
+    for (let i = 0; gp * i * 7 < w; i++) {
+      const gx = gp * i * 7
+      const gy = Math.round(h * 0.56 + 5)
+      ctx.fillRect(gx,           gy,                    gp, Math.round(h * 0.025))
+      ctx.fillRect(gx + gp * 3,  gy + Math.round(h * 0.01), gp, Math.round(h * 0.018))
+    }
+    // Dark bottom strip
+    ctx.fillStyle = C.grass3
+    ctx.fillRect(0, h * 0.93, w, h * 0.07)
+
+    // Trees (drawn as part of background)
+    this._drawTrees()
   }
 
-  // ── Background & field ───────────────────────────────────────────────────────
-
-  _clearBackground(w, h) {
-    const { ctx } = this
-    // Dark forest gradient
-    const grad = ctx.createLinearGradient(0, 0, 0, h)
-    grad.addColorStop(0, '#0d2b0d')
-    grad.addColorStop(0.5, '#1a3d1a')
-    grad.addColorStop(1, '#0f280f')
-    ctx.fillStyle = grad
-    ctx.fillRect(0, 0, w, h)
+  _generateClouds(w, h) {
+    return [
+      { x: w * 0.12, y: h * 0.07, s: w * 0.14 },
+      { x: w * 0.52, y: h * 0.04, s: w * 0.18 },
+      { x: w * 0.82, y: h * 0.10, s: w * 0.12 },
+      { x: w * 0.35, y: h * 0.16, s: w * 0.10 },
+    ]
   }
 
-  _drawField(w, h) {
+  _pixelCloud(x, y, s) {
     const { ctx } = this
-    // Soft grass oval in the center – the play area
-    const grad = ctx.createRadialGradient(w / 2, h * 0.44, h * 0.05, w / 2, h * 0.44, h * 0.52)
-    grad.addColorStop(0, 'rgba(56,130,56,0.55)')
-    grad.addColorStop(0.65, 'rgba(34,100,34,0.30)')
-    grad.addColorStop(1, 'rgba(10,40,10,0)')
-    ctx.fillStyle = grad
-    ctx.fillRect(0, 0, w, h)
-
-    // Subtle grass texture dots
-    ctx.fillStyle = 'rgba(80,160,80,0.07)'
-    const seed = [0.12, 0.37, 0.63, 0.88, 0.24, 0.51, 0.76, 0.19, 0.44, 0.68, 0.93]
-    for (let i = 0; i < 40; i++) {
-      const sx = seed[i % seed.length]
-      const sy = seed[(i * 3) % seed.length]
-      ctx.beginPath()
-      ctx.arc(sx * w + (i * 17 % 40) - 20, sy * h + (i * 11 % 30) - 15, 2, 0, Math.PI * 2)
-      ctx.fill()
+    const p = Math.max(4, Math.round(s / 8))
+    ctx.fillStyle = C.cloud
+    const parts = [[-1.5, 0, 3, 1], [-1, -1, 2, 1], [-0.5, -2, 1, 1], [1.5, 0, 1, 1], [-2.5, 0, 1, 1]]
+    for (const [ox, oy, pw, ph] of parts) {
+      ctx.fillRect(Math.round(x + ox * p), Math.round(y + oy * p), Math.round(pw * p), Math.round(ph * p))
     }
   }
 
   _generateTrees(w, h) {
-    // Place trees deterministically around the canvas border
-    const trees = []
-    const positions = [
-      // Top edge
-      { x: 0.04, y: 0.02 }, { x: 0.15, y: -0.01 }, { x: 0.28, y: 0.03 },
-      { x: 0.42, y: -0.01 }, { x: 0.55, y: 0.02 }, { x: 0.68, y: -0.01 },
-      { x: 0.80, y: 0.03 }, { x: 0.92, y: 0.00 },
-      // Bottom edge
-      { x: 0.05, y: 0.96 }, { x: 0.18, y: 0.98 }, { x: 0.32, y: 0.95 },
-      { x: 0.70, y: 0.97 }, { x: 0.84, y: 0.95 }, { x: 0.95, y: 0.98 },
-      // Left edge
-      { x: -0.02, y: 0.15 }, { x: 0.00, y: 0.30 }, { x: -0.01, y: 0.50 },
-      { x: 0.01, y: 0.70 }, { x: -0.02, y: 0.85 },
-      // Right edge
-      { x: 0.98, y: 0.18 }, { x: 0.97, y: 0.35 }, { x: 0.99, y: 0.55 },
-      { x: 0.97, y: 0.72 }, { x: 0.98, y: 0.88 },
+    const pos = [
+      { x: 0.04, y: 0.01 }, { x: 0.15, y: -0.01 }, { x: 0.27, y: 0.02 },
+      { x: 0.40, y: -0.01 }, { x: 0.53, y: 0.01 }, { x: 0.66, y: -0.01 },
+      { x: 0.78, y: 0.02 }, { x: 0.90, y: -0.01 },
+      { x: 0.05, y: 0.95 }, { x: 0.18, y: 0.97 }, { x: 0.30, y: 0.94 },
+      { x: 0.70, y: 0.96 }, { x: 0.82, y: 0.94 }, { x: 0.94, y: 0.97 },
+      { x: -0.01, y: 0.14 }, { x: 0.01, y: 0.30 }, { x: -0.01, y: 0.46 },
+      { x: 0.01,  y: 0.62 }, { x: -0.01, y: 0.78 },
+      { x: 0.97, y: 0.17 }, { x: 0.99, y: 0.33 }, { x: 0.97, y: 0.49 },
+      { x: 0.99, y: 0.65 }, { x: 0.97, y: 0.81 },
     ]
     const sizes = [28, 24, 32, 26, 30, 22, 34, 28, 25, 29, 31, 23, 27, 33, 28, 24]
-    positions.forEach((p, i) => {
-      trees.push({
-        x: p.x * w,
-        y: p.y * h,
-        size: sizes[i % sizes.length],
-      })
-    })
-    return trees
+    return pos.map((p, i) => ({ x: p.x * w, y: p.y * h, size: sizes[i % sizes.length] }))
   }
 
   _drawTrees() {
     if (!this._trees) return
-    const { ctx } = this
-    for (const t of this._trees) {
-      const s = t.size
-      // Trunk
-      ctx.fillStyle = '#5c3d11'
-      ctx.fillRect(t.x - s * 0.15, t.y + s * 0.5, s * 0.3, s * 0.6)
-      // Crown (two overlapping circles for a fluffy look)
-      ctx.beginPath()
-      ctx.arc(t.x, t.y + s * 0.1, s * 0.55, 0, Math.PI * 2)
-      ctx.fillStyle = '#1b4d1b'
-      ctx.fill()
-      ctx.beginPath()
-      ctx.arc(t.x - s * 0.2, t.y + s * 0.25, s * 0.38, 0, Math.PI * 2)
-      ctx.fillStyle = '#1f5c1f'
-      ctx.fill()
-      ctx.beginPath()
-      ctx.arc(t.x + s * 0.2, t.y + s * 0.25, s * 0.38, 0, Math.PI * 2)
-      ctx.fillStyle = '#1f5c1f'
-      ctx.fill()
-      // Small highlight
-      ctx.beginPath()
-      ctx.arc(t.x - s * 0.1, t.y - s * 0.1, s * 0.2, 0, Math.PI * 2)
-      ctx.fillStyle = 'rgba(60,120,60,0.4)'
-      ctx.fill()
-    }
+    for (const t of this._trees) this._pixelTree(t.x, t.y, t.size)
   }
 
-  // ── Apple drawing ────────────────────────────────────────────────────────────
+  _pixelTree(x, y, s) {
+    const { ctx } = this
+    const p  = Math.max(2, Math.round(s / 5))
+    const cx = Math.round(x)
+    const top = Math.round(y)
+
+    // Trunk
+    ctx.fillStyle = C.trunk
+    ctx.fillRect(cx - p, top + p * 5, p * 2, p * 3)
+    ctx.fillStyle = C.leaf3
+    ctx.fillRect(cx,     top + p * 5, p,     p * 3)  // trunk shadow
+
+    // 3-layer stepped crown (bottom widest)
+    const layers = [
+      { y: top + p * 3, w: 3, col: C.leaf2 },
+      { y: top + p * 1, w: 2, col: C.leaf2 },
+      { y: top,         w: 1, col: C.leaf2 },
+    ]
+    for (const l of layers) {
+      ctx.fillStyle = l.col
+      ctx.fillRect(cx - l.w * p, l.y, l.w * p * 2, p * 2)
+      ctx.fillStyle = C.leaf1  // top highlight
+      ctx.fillRect(cx - l.w * p, l.y, l.w * p * 2, p)
+      ctx.fillStyle = C.leaf3  // right shadow
+      ctx.fillRect(cx + (l.w - 1) * p, l.y, p, p * 2)
+    }
+
+    // Black pixel outlines
+    ctx.fillStyle = C.black
+    ctx.fillRect(cx - p * 3 - 1, top + p * 3, 1, p * 2)
+    ctx.fillRect(cx + p * 3,     top + p * 3, 1, p * 2)
+    ctx.fillRect(cx - p * 2 - 1, top + p,     1, p * 2)
+    ctx.fillRect(cx + p * 2,     top + p,     1, p * 2)
+    ctx.fillRect(cx - p - 1,     top,         1, p)
+    ctx.fillRect(cx + p,         top,         1, p)
+    ctx.fillRect(cx - p * 3, top + p * 3 - 1, p * 6, 1)
+    ctx.fillRect(cx - p * 2, top + p - 1,     p * 4, 1)
+    ctx.fillRect(cx - p,     top - 1,          p * 2, 1)
+  }
+
+  // ── Apple ─────────────────────────────────────────────────────────────────
 
   _drawApple(x, y, r) {
     const { ctx } = this
-    ctx.save()
-    ctx.shadowColor = 'rgba(0,0,0,0.45)'
-    ctx.shadowBlur = 8
-    ctx.shadowOffsetY = 4
+    const p  = Math.max(2, Math.round(r / 4))
+    const cx = Math.round(x)
+    const cy = Math.round(y)
+
+    // Stem & leaf (above outline)
+    ctx.fillStyle = C.aStem
+    ctx.fillRect(cx, cy - p * 3, p, p)
+    ctx.fillStyle = C.aGreen
+    ctx.fillRect(cx + p, cy - p * 4, p, p)
+    ctx.fillRect(cx + p, cy - p * 3, p, p)
+
+    // Black outline
+    ctx.fillStyle = C.black
+    ctx.fillRect(cx - p * 2 - 1, cy - p * 2 - 1, p * 4 + 2, p * 5 + 2)
 
     // Body
-    ctx.beginPath()
-    ctx.arc(x, y + r * 0.1, r * 0.85, 0, Math.PI * 2)
-    ctx.fillStyle = '#e53935'
-    ctx.fill()
+    ctx.fillStyle = C.aRed
+    ctx.fillRect(cx - p,     cy - p * 2, p * 2, p)      // top bump
+    ctx.fillRect(cx - p * 2, cy - p,     p * 4, p * 3)  // main body
+    ctx.fillRect(cx - p,     cy + p * 2, p * 2, p)      // bottom bump
 
-    // Darker side shadow
-    const sideGrad = ctx.createRadialGradient(x + r * 0.3, y + r * 0.3, 0, x, y, r)
-    sideGrad.addColorStop(0, 'rgba(80,0,0,0.35)')
-    sideGrad.addColorStop(1, 'rgba(0,0,0,0)')
-    ctx.beginPath()
-    ctx.arc(x, y + r * 0.1, r * 0.85, 0, Math.PI * 2)
-    ctx.fillStyle = sideGrad
-    ctx.fill()
+    // Highlight top-left
+    ctx.fillStyle = C.aRedLt
+    ctx.fillRect(cx - p * 2, cy - p, p, p)
 
-    ctx.restore()
-
-    // Shine highlight
-    ctx.beginPath()
-    ctx.ellipse(x - r * 0.28, y - r * 0.22, r * 0.22, r * 0.32, -0.6, 0, Math.PI * 2)
-    ctx.fillStyle = 'rgba(255,255,255,0.40)'
-    ctx.fill()
-
-    // Top indent
-    ctx.beginPath()
-    ctx.ellipse(x, y - r * 0.7, r * 0.12, r * 0.1, 0, 0, Math.PI * 2)
-    ctx.fillStyle = '#b71c1c'
-    ctx.fill()
-
-    // Stem
-    ctx.beginPath()
-    ctx.moveTo(x + r * 0.04, y - r * 0.75)
-    ctx.quadraticCurveTo(x + r * 0.18, y - r * 1.15, x + r * 0.08, y - r * 1.3)
-    ctx.strokeStyle = '#5d4037'
-    ctx.lineWidth = r * 0.18
-    ctx.lineCap = 'round'
-    ctx.stroke()
-
-    // Leaf
-    ctx.save()
-    ctx.translate(x + r * 0.15, y - r * 1.05)
-    ctx.rotate(0.5)
-    ctx.beginPath()
-    ctx.ellipse(0, 0, r * 0.35, r * 0.18, 0, 0, Math.PI * 2)
-    ctx.fillStyle = '#388e3c'
-    ctx.fill()
-    // Leaf vein
-    ctx.beginPath()
-    ctx.moveTo(-r * 0.3, 0)
-    ctx.lineTo(r * 0.3, 0)
-    ctx.strokeStyle = 'rgba(255,255,255,0.3)'
-    ctx.lineWidth = 1
-    ctx.stroke()
-    ctx.restore()
+    // Shadow right side
+    ctx.fillStyle = C.aRedDk
+    ctx.fillRect(cx + p, cy - p, p, p * 3)
+    ctx.fillRect(cx - p, cy + p * 2, p * 2, p)
   }
 
   _drawAppleCarried(player) {
@@ -351,312 +317,337 @@ export class Renderer {
     this._drawApple(apple.x, apple.y, apple.radius * 0.82)
   }
 
-  // ── Base drawing ─────────────────────────────────────────────────────────────
+  // ── Base ──────────────────────────────────────────────────────────────────
 
   _drawBase(base) {
     const { ctx } = this
+    const r  = base.radius
+    const bx = Math.round(base.x - r)
+    const by = Math.round(base.y - r)
+    const bs = Math.round(r * 2)
+    const bp = Math.max(3, Math.round(r / 12))
 
-    // Outer glow ring
-    const grad = ctx.createRadialGradient(base.x, base.y, base.radius * 0.5,
-      base.x, base.y, base.radius * 1.2)
-    grad.addColorStop(0, base.color + '44')
-    grad.addColorStop(1, base.color + '00')
-    ctx.beginPath()
-    ctx.arc(base.x, base.y, base.radius * 1.2, 0, Math.PI * 2)
-    ctx.fillStyle = grad
-    ctx.fill()
+    // Fill
+    ctx.fillStyle = 'rgba(10,40,15,0.55)'
+    ctx.fillRect(bx, by, bs, bs)
 
-    // Base circle (earthy fill)
-    ctx.beginPath()
-    ctx.arc(base.x, base.y, base.radius, 0, Math.PI * 2)
-    ctx.fillStyle = 'rgba(30,60,20,0.55)'
-    ctx.fill()
-    ctx.strokeStyle = base.color
-    ctx.lineWidth = 2.5
-    ctx.setLineDash([8, 5])
-    ctx.stroke()
-    ctx.setLineDash([])
+    // Pixel border
+    ctx.fillStyle = base.color
+    ctx.fillRect(bx,          by,          bs, bp)
+    ctx.fillRect(bx,          by + bs - bp, bs, bp)
+    ctx.fillRect(bx,          by,          bp, bs)
+    ctx.fillRect(bx + bs - bp, by,          bp, bs)
+
+    // White corner squares
+    const cs = bp * 2
+    ctx.fillStyle = C.white
+    ctx.fillRect(bx,          by,          cs, cs)
+    ctx.fillRect(bx + bs - cs, by,          cs, cs)
+    ctx.fillRect(bx,          by + bs - cs, cs, cs)
+    ctx.fillRect(bx + bs - cs, by + bs - cs, cs, cs)
 
     // Label
     ctx.textAlign = 'center'
     ctx.fillStyle = base.color
-    ctx.font = `bold 13px sans-serif`
-    ctx.fillText(base.label, base.x, base.y - base.radius - 8)
+    ctx.font = `bold 12px 'Courier New', monospace`
+    ctx.fillText(base.label, base.x, by - 5)
 
-    // Apple count indicators (🍎 filled vs ○ empty)
+    // Apple count dots
     const total = 3
-    const dotR = 6
-    const spacing = dotR * 2.8
-    const startX = base.x - ((total - 1) * spacing) / 2
+    const dp    = bp * 2 + 2
+    const gap   = dp + 4
+    const startX = base.x - ((total - 1) * gap) / 2
     for (let i = 0; i < total; i++) {
-      const dx = startX + i * spacing
-      const dy = base.y + base.radius + 14
+      const dx = Math.round(startX + i * gap)
+      const dy = Math.round(by + bs + 6)
       if (i < base.bottleCount) {
-        // Mini apple icon
-        ctx.beginPath()
-        ctx.arc(dx, dy, dotR, 0, Math.PI * 2)
-        ctx.fillStyle = '#e53935'
-        ctx.fill()
-        ctx.beginPath()
-        ctx.arc(dx - dotR * 0.3, dy - dotR * 0.3, dotR * 0.3, 0, Math.PI * 2)
-        ctx.fillStyle = 'rgba(255,255,255,0.35)'
-        ctx.fill()
+        ctx.fillStyle = C.black
+        ctx.fillRect(dx - dp / 2 - 1, dy - 1, dp + 2, dp + 2)
+        ctx.fillStyle = C.aRed
+        ctx.fillRect(dx - dp / 2, dy, dp, dp)
+        ctx.fillStyle = C.aRedLt
+        ctx.fillRect(dx - dp / 2, dy, Math.ceil(dp / 2), Math.ceil(dp / 2))
       } else {
-        ctx.beginPath()
-        ctx.arc(dx, dy, dotR, 0, Math.PI * 2)
-        ctx.fillStyle = 'rgba(255,255,255,0.12)'
-        ctx.fill()
+        ctx.fillStyle = base.color + '50'
+        ctx.fillRect(dx - dp / 2, dy, dp, dp)
+        ctx.fillStyle = base.color
+        ctx.fillRect(dx - dp / 2, dy, dp, 1)
+        ctx.fillRect(dx - dp / 2, dy, 1,  dp)
       }
     }
   }
 
-  // ── Player drawing ───────────────────────────────────────────────────────────
+  // ── Player ────────────────────────────────────────────────────────────────
 
   _drawPlayer(player) {
     const { ctx } = this
-    const x = player.x
-    const y = player.y
+    const x = Math.round(player.x)
+    const y = Math.round(player.y)
     const r = player.radius
 
-    if (player.type === 'player') {
-      this._drawCapybara(ctx, x, y, r, player.carrying != null)
-    } else if (player.type === 'ai1') {
-      this._drawPanda(ctx, x, y, r, player.carrying != null)
-    } else {
-      this._drawGoldenRetriever(ctx, x, y, r, player.carrying != null)
-    }
+    if (player.type === 'player')   this._drawCapybara(ctx, x, y, r, player.carrying != null)
+    else if (player.type === 'ai1') this._drawPanda(ctx, x, y, r, player.carrying != null)
+    else                            this._drawGolden(ctx, x, y, r, player.carrying != null)
 
     ctx.textAlign = 'center'
     ctx.fillStyle = player.color
-    ctx.font = `bold 11px sans-serif`
-    ctx.fillText(player.label, x, y + r + 13)
+    ctx.font = `bold 10px 'Courier New', monospace`
+    ctx.fillText(player.label, x, y + r + 14)
   }
 
-  // ── Animal drawing functions ──────────────────────────────────────────────────
+  // ── Pixel art animal sprites ───────────────────────────────────────────────
 
   _drawCapybara(ctx, x, y, r, carrying) {
-    ctx.save()
-    ctx.shadowColor = 'rgba(0,0,0,0.35)'
-    ctx.shadowBlur = 10
-    ctx.shadowOffsetY = 5
+    const p  = Math.max(2, Math.round(r / 5.5))
+    const cx = Math.round(x)
+    const cy = Math.round(y)
 
-    ctx.beginPath()
-    ctx.ellipse(x, y + r * 0.1, r * 0.95, r * 0.85, 0, 0, Math.PI * 2)
-    ctx.fillStyle = '#b45309'
-    ctx.fill()
+    // Outline
+    ctx.fillStyle = C.black
+    ctx.fillRect(cx - p * 4 - 1, cy - p * 5 - 1, p * 8 + 2, p * 8 + 2)
 
-    ctx.beginPath()
-    ctx.ellipse(x, y - r * 0.1, r * 0.7, r * 0.65, 0, 0, Math.PI * 2)
-    ctx.fillStyle = '#d97706'
-    ctx.fill()
+    // Body (wide, chunky)
+    ctx.fillStyle = C.capyBr
+    ctx.fillRect(cx - p * 4, cy,      p * 8, p * 3)   // lower body
+    ctx.fillRect(cx - p * 3, cy - p * 4, p * 6, p * 4) // head/upper
 
-    ctx.restore()
+    // Light top
+    ctx.fillStyle = C.capyLt
+    ctx.fillRect(cx - p * 3, cy - p * 4, p * 6, p)   // head top
+    ctx.fillRect(cx - p * 4, cy,          p * 8, p)   // body top
 
-    this._drawEar(ctx, x - r * 0.5, y - r * 0.7, r * 0.22, '#b45309')
-    this._drawEar(ctx, x + r * 0.5, y - r * 0.7, r * 0.22, '#b45309')
+    // Dark belly
+    ctx.fillStyle = C.capyDk
+    ctx.fillRect(cx - p * 3, cy + p * 2, p * 6, p)
 
-    ctx.beginPath()
-    ctx.ellipse(x, y + r * 0.05, r * 0.42, r * 0.22, 0, 0, Math.PI * 2)
-    ctx.fillStyle = '#92400e'
-    ctx.fill()
+    // Ears
+    ctx.fillStyle = C.capyBr
+    ctx.fillRect(cx - p * 3, cy - p * 5, p * 2, p)
+    ctx.fillRect(cx + p,     cy - p * 5, p * 2, p)
+    ctx.fillStyle = C.pink
+    ctx.fillRect(cx - p * 2, cy - p * 5, p, p)
+    ctx.fillRect(cx + p * 1, cy - p * 5, p, p)
 
-    ctx.fillStyle = '#78350f'
-    ctx.beginPath()
-    ctx.ellipse(x - r * 0.14, y + r * 0.04, r * 0.07, r * 0.06, 0, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.beginPath()
-    ctx.ellipse(x + r * 0.14, y + r * 0.04, r * 0.07, r * 0.06, 0, 0, Math.PI * 2)
-    ctx.fill()
+    // Eyes
+    ctx.fillStyle = C.black
+    ctx.fillRect(cx - p * 2, cy - p * 2, p, p)
+    ctx.fillRect(cx + p,     cy - p * 2, p, p)
+    ctx.fillStyle = C.white
+    ctx.fillRect(cx - p * 2, cy - p * 2, Math.ceil(p * 0.5), Math.ceil(p * 0.5))
+    ctx.fillRect(cx + p,     cy - p * 2, Math.ceil(p * 0.5), Math.ceil(p * 0.5))
 
-    this._drawEye(ctx, x - r * 0.28, y - r * 0.28)
-    this._drawEye(ctx, x + r * 0.28, y - r * 0.28)
+    // Wide flat nose
+    ctx.fillStyle = C.capyDk
+    ctx.fillRect(cx - p * 2, cy - p, p * 4, p)
+    ctx.fillStyle = C.black
+    ctx.fillRect(cx - p * 1.5, cy - p, Math.ceil(p * 0.5), Math.ceil(p * 0.5))
+    ctx.fillRect(cx + p * 0.5, cy - p, Math.ceil(p * 0.5), Math.ceil(p * 0.5))
 
     if (carrying) {
-      ctx.beginPath()
-      ctx.arc(x, y + r * 0.18, r * 0.2, 0.1, Math.PI - 0.1)
-      ctx.strokeStyle = '#78350f'
-      ctx.lineWidth = 2
-      ctx.stroke()
+      ctx.fillStyle = C.capyDk
+      ctx.fillRect(cx - p, cy, p * 2, Math.ceil(p * 0.4))
     }
   }
 
   _drawPanda(ctx, x, y, r, carrying) {
-    ctx.save()
-    ctx.shadowColor = 'rgba(0,0,0,0.35)'
-    ctx.shadowBlur = 10
-    ctx.shadowOffsetY = 5
+    const p  = Math.max(2, Math.round(r / 5.5))
+    const cx = Math.round(x)
+    const cy = Math.round(y)
 
-    ctx.beginPath()
-    ctx.ellipse(x, y + r * 0.05, r * 0.88, r * 0.88, 0, 0, Math.PI * 2)
-    ctx.fillStyle = '#f1f5f9'
-    ctx.fill()
+    // Black base
+    ctx.fillStyle = C.pandaB
+    ctx.fillRect(cx - p * 4 - 1, cy - p * 5 - 1, p * 8 + 2, p * 8 + 2)
 
-    ctx.restore()
+    // White body
+    ctx.fillStyle = C.pandaW
+    ctx.fillRect(cx - p * 3, cy - p * 4, p * 6, p * 7)
 
-    this._drawEar(ctx, x - r * 0.52, y - r * 0.65, r * 0.28, '#1e293b')
-    this._drawEar(ctx, x + r * 0.52, y - r * 0.65, r * 0.28, '#1e293b')
+    // Black ears
+    ctx.fillStyle = C.pandaB
+    ctx.fillRect(cx - p * 3, cy - p * 5, p * 2, p)
+    ctx.fillRect(cx + p,     cy - p * 5, p * 2, p)
 
-    ctx.beginPath()
-    ctx.ellipse(x - r * 0.3, y - r * 0.12, r * 0.27, r * 0.22, -0.3, 0, Math.PI * 2)
-    ctx.fillStyle = '#1e293b'
-    ctx.fill()
-    ctx.beginPath()
-    ctx.ellipse(x + r * 0.3, y - r * 0.12, r * 0.27, r * 0.22, 0.3, 0, Math.PI * 2)
-    ctx.fillStyle = '#1e293b'
-    ctx.fill()
+    // Black eye patches
+    ctx.fillRect(cx - p * 3, cy - p * 2, p * 2, p * 2)
+    ctx.fillRect(cx + p,     cy - p * 2, p * 2, p * 2)
 
-    ctx.beginPath()
-    ctx.arc(x - r * 0.3, y - r * 0.14, r * 0.12, 0, Math.PI * 2)
-    ctx.fillStyle = '#fff'
-    ctx.fill()
-    ctx.beginPath()
-    ctx.arc(x + r * 0.3, y - r * 0.14, r * 0.12, 0, Math.PI * 2)
-    ctx.fillStyle = '#fff'
-    ctx.fill()
+    // White eyes
+    ctx.fillStyle = C.white
+    ctx.fillRect(cx - p * 2.5, cy - p * 2, p, p)
+    ctx.fillRect(cx + p * 1.5, cy - p * 2, p, p)
 
-    ctx.fillStyle = '#0f172a'
-    ctx.beginPath()
-    ctx.arc(x - r * 0.28, y - r * 0.14, r * 0.06, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.beginPath()
-    ctx.arc(x + r * 0.28, y - r * 0.14, r * 0.06, 0, Math.PI * 2)
-    ctx.fill()
+    // Pupils
+    ctx.fillStyle = C.pandaB
+    ctx.fillRect(cx - p * 2,  cy - p * 1.5, Math.ceil(p * 0.5), Math.ceil(p * 0.5))
+    ctx.fillRect(cx + p * 1.5, cy - p * 1.5, Math.ceil(p * 0.5), Math.ceil(p * 0.5))
 
-    ctx.beginPath()
-    ctx.ellipse(x, y + r * 0.08, r * 0.12, r * 0.08, 0, 0, Math.PI * 2)
-    ctx.fillStyle = '#f9a8d4'
-    ctx.fill()
+    // Pink nose
+    ctx.fillStyle = C.pink
+    ctx.fillRect(cx - Math.ceil(p * 0.5), cy, p, Math.ceil(p * 0.5))
 
-    ctx.beginPath()
-    ctx.arc(x, y + r * 0.2, r * 0.15, 0.15, Math.PI - 0.15)
-    ctx.strokeStyle = '#64748b'
-    ctx.lineWidth = 1.5
-    ctx.stroke()
-  }
+    // Smile
+    ctx.fillStyle = C.pandaB
+    ctx.fillRect(cx - p, cy + Math.ceil(p * 0.5), p * 2, Math.ceil(p * 0.4))
 
-  _drawGoldenRetriever(ctx, x, y, r, carrying) {
-    ctx.save()
-    ctx.shadowColor = 'rgba(0,0,0,0.35)'
-    ctx.shadowBlur = 10
-    ctx.shadowOffsetY = 5
-
-    ctx.beginPath()
-    ctx.ellipse(x, y + r * 0.1, r * 1.0, r * 0.92, 0, 0, Math.PI * 2)
-    ctx.fillStyle = '#f59e0b'
-    ctx.fill()
-
-    ctx.restore()
-
-    ctx.beginPath()
-    ctx.ellipse(x - r * 0.62, y + r * 0.05, r * 0.28, r * 0.5, -0.3, 0, Math.PI * 2)
-    ctx.fillStyle = '#d97706'
-    ctx.fill()
-    ctx.beginPath()
-    ctx.ellipse(x + r * 0.62, y + r * 0.05, r * 0.28, r * 0.5, 0.3, 0, Math.PI * 2)
-    ctx.fillStyle = '#d97706'
-    ctx.fill()
-
-    ctx.beginPath()
-    ctx.ellipse(x, y - r * 0.08, r * 0.68, r * 0.62, 0, 0, Math.PI * 2)
-    ctx.fillStyle = '#fcd34d'
-    ctx.fill()
-
-    this._drawEye(ctx, x - r * 0.26, y - r * 0.22)
-    this._drawEye(ctx, x + r * 0.26, y - r * 0.22)
-
-    ctx.beginPath()
-    ctx.ellipse(x, y + r * 0.04, r * 0.16, r * 0.11, 0, 0, Math.PI * 2)
-    ctx.fillStyle = '#92400e'
-    ctx.fill()
-
-    ctx.beginPath()
-    ctx.ellipse(x, y + r * 0.26, r * 0.18, r * 0.2, 0, 0, Math.PI * 2)
-    ctx.fillStyle = '#f9a8d4'
-    ctx.fill()
-
-    ctx.beginPath()
-    ctx.moveTo(x, y + r * 0.16)
-    ctx.lineTo(x, y + r * 0.44)
-    ctx.strokeStyle = '#ec4899'
-    ctx.lineWidth = 1.5
-    ctx.stroke()
-  }
-
-  _drawEar(ctx, x, y, r, color) {
-    ctx.beginPath()
-    ctx.ellipse(x, y, r, r * 0.75, 0, 0, Math.PI * 2)
-    ctx.fillStyle = color
-    ctx.fill()
-  }
-
-  _drawEye(ctx, x, y) {
-    ctx.beginPath()
-    ctx.arc(x, y, 5.5, 0, Math.PI * 2)
-    ctx.fillStyle = '#fff'
-    ctx.fill()
-    ctx.beginPath()
-    ctx.arc(x + 0.8, y + 0.5, 3, 0, Math.PI * 2)
-    ctx.fillStyle = '#0f172a'
-    ctx.fill()
-    ctx.beginPath()
-    ctx.arc(x + 1.5, y - 0.5, 1.2, 0, Math.PI * 2)
-    ctx.fillStyle = '#fff'
-    ctx.fill()
-  }
-
-  // ── HUD ──────────────────────────────────────────────────────────────────────
-
-  _drawHUD(state, w, h) {
-    const { ctx } = this
-
-    ctx.fillStyle = 'rgba(0,20,0,0.5)'
-    ctx.fillRect(0, 0, w, 36)
-
-    ctx.textAlign = 'center'
-    ctx.fillStyle = '#c8e6c9'
-    ctx.font = `bold 14px sans-serif`
-    ctx.fillText('먼저 사과 3개를 진영에 모으세요!', w / 2, 23)
-
-    const player = state.players.find(p => p.type === 'player')
-    if (player) {
-      const count = player.base.bottleCount
-      ctx.fillStyle = player.color
-      ctx.font = `bold 13px sans-serif`
-      ctx.textAlign = 'left'
-      ctx.fillText(`나: ${count}/3 🍎`, 16, h - 16)
+    if (carrying) {
+      ctx.fillStyle = C.aGreen
+      ctx.fillRect(cx + p * 2, cy - p * 5, p, p * 3)
     }
   }
 
-  // ── UI helpers ───────────────────────────────────────────────────────────────
+  _drawGolden(ctx, x, y, r, carrying) {
+    const p  = Math.max(2, Math.round(r / 5.5))
+    const cx = Math.round(x)
+    const cy = Math.round(y)
 
-  _roundRect(ctx, x, y, w, h, r, fill, stroke) {
-    ctx.beginPath()
-    ctx.moveTo(x + r, y)
-    ctx.lineTo(x + w - r, y)
-    ctx.quadraticCurveTo(x + w, y, x + w, y + r)
-    ctx.lineTo(x + w, y + h - r)
-    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h)
-    ctx.lineTo(x + r, y + h)
-    ctx.quadraticCurveTo(x, y + h, x, y + h - r)
-    ctx.lineTo(x, y + r)
-    ctx.quadraticCurveTo(x, y, x + r, y)
-    ctx.closePath()
-    if (fill) { ctx.fillStyle = fill; ctx.fill() }
-    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1.5; ctx.stroke() }
+    // Outline
+    ctx.fillStyle = C.black
+    ctx.fillRect(cx - p * 4 - 1, cy - p * 5 - 1, p * 8 + 2, p * 8 + 2)
+
+    // Floppy ears
+    ctx.fillStyle = C.goldnDk
+    ctx.fillRect(cx - p * 4, cy - p * 2, p * 2, p * 4)
+    ctx.fillRect(cx + p * 2, cy - p * 2, p * 2, p * 4)
+
+    // Body
+    ctx.fillStyle = C.goldnYl
+    ctx.fillRect(cx - p * 3, cy - p * 4, p * 6, p * 7)
+
+    // Face (lighter)
+    ctx.fillStyle = C.goldnLt
+    ctx.fillRect(cx - p * 2, cy - p * 3, p * 4, p * 4)
+
+    // Eyes
+    ctx.fillStyle = C.black
+    ctx.fillRect(cx - p * 1.5, cy - p * 2, p, p)
+    ctx.fillRect(cx + p * 0.5, cy - p * 2, p, p)
+    ctx.fillStyle = C.white
+    ctx.fillRect(cx - p * 1.5, cy - p * 2, Math.ceil(p * 0.5), Math.ceil(p * 0.5))
+    ctx.fillRect(cx + p * 0.5, cy - p * 2, Math.ceil(p * 0.5), Math.ceil(p * 0.5))
+
+    // Nose
+    ctx.fillStyle = C.capyDk
+    ctx.fillRect(cx - p, cy - p * 0.5, p * 2, p)
+
+    // Tongue
+    ctx.fillStyle = C.pink
+    ctx.fillRect(cx - Math.ceil(p * 0.5), cy + Math.ceil(p * 0.5), p, p)
+
+    if (carrying) {
+      ctx.fillStyle = C.goldnYl
+      ctx.fillRect(cx + p * 3, cy - p * 4, p, p * 2)
+      ctx.fillRect(cx + p * 4, cy - p * 5, p, p)
+    }
   }
 
-  _drawButton(ctx, cx, cy, bw, bh, text, color) {
-    const x = cx - bw / 2
-    const y = cy - bh / 2
-    this._roundRect(ctx, x, y, bw, bh, 14, color, 'rgba(255,255,255,0.3)')
+  // ── HUD ───────────────────────────────────────────────────────────────────
+
+  _drawHUD(state, w, _h) {
+    const { ctx } = this
+    ctx.fillStyle = C.black
+    ctx.fillRect(0, 0, w, 40)
+    ctx.fillStyle = '#18302a'
+    ctx.fillRect(0, 3, w, 35)
+    ctx.fillStyle = '#28504a'
+    ctx.fillRect(0, 3, w, 3)
+
     ctx.textAlign = 'center'
-    ctx.fillStyle = '#fff'
-    ctx.font = `bold ${Math.round(bh * 0.38)}px sans-serif`
+    ctx.fillStyle = '#70ffb0'
+    ctx.font = `bold 13px 'Courier New', monospace`
+    ctx.fillText('COLLECT 3 APPLES!', w / 2, 25)
+
+    const player = state.players.find(p => p.type === 'player')
+    if (player) {
+      ctx.fillStyle = C.pPlayer
+      ctx.font = `bold 12px 'Courier New', monospace`
+      ctx.textAlign = 'left'
+      ctx.fillText(`YOU:${player.base.bottleCount}/3`, 12, 25)
+    }
+    ctx.textAlign = 'right'
+    ctx.fillStyle = C.gold
+    ctx.font = `bold 12px 'Courier New', monospace`
+    ctx.fillText(`LV.${state.level}`, w - 10, 25)
+  }
+
+  // ── UI helpers ────────────────────────────────────────────────────────────
+
+  _levelBadge(cx, cy, level, isNext) {
+    const { ctx } = this
+    const bw = 160, bh = 36
+    const col = isNext ? '#1a7030' : '#1a4060'
+    ctx.fillStyle = C.black
+    ctx.fillRect(cx - bw / 2 - 2, cy - bh / 2 - 2, bw + 4, bh + 4)
+    ctx.fillStyle = col
+    ctx.fillRect(cx - bw / 2, cy - bh / 2, bw, bh)
+    ctx.fillStyle = 'rgba(255,255,255,0.25)'
+    ctx.fillRect(cx - bw / 2, cy - bh / 2, bw, 3)
+    ctx.fillRect(cx - bw / 2, cy - bh / 2, 3, bh)
+    ctx.fillStyle = 'rgba(0,0,0,0.30)'
+    ctx.fillRect(cx - bw / 2,     cy + bh / 2 - 3, bw, 3)
+    ctx.fillRect(cx + bw / 2 - 3, cy - bh / 2,     3,  bh)
+    ctx.textAlign = 'center'
+    ctx.fillStyle = C.white
+    ctx.font = `bold 14px 'Courier New', monospace`
+    ctx.fillText(isNext ? `NEXT: LV.${level}` : `LV.${level}`, cx, cy + 5)
+  }
+
+  _panel(x, y, w, h) {
+    const { ctx } = this
+    const b = 4
+    ctx.fillStyle = C.black
+    ctx.fillRect(x, y, w, h)
+    ctx.fillStyle = C.panelBg
+    ctx.fillRect(x + b, y + b, w - b * 2, h - b * 2)
+    ctx.fillStyle = C.panelHL
+    ctx.fillRect(x + b, y + b, w - b * 2, b)
+    ctx.fillRect(x + b, y + b, b, h - b * 2)
+    ctx.fillStyle = C.panelSH
+    ctx.fillRect(x + b, y + h - b * 2, w - b * 2, b)
+    ctx.fillRect(x + w - b * 2, y + b, b, h - b * 2)
+  }
+
+  _pxFrame(x, y, w, h, color) {
+    const { ctx } = this
+    ctx.fillStyle = C.black
+    ctx.fillRect(x - 2, y - 2, w + 4, h + 4)
+    ctx.fillStyle = color + '40'
+    ctx.fillRect(x, y, w, h)
+    ctx.fillStyle = color
+    ctx.fillRect(x, y, w, 2)
+    ctx.fillRect(x, y, 2, h)
+  }
+
+  _btn(cx, cy, bw, bh, text, color) {
+    const { ctx } = this
+    const x = Math.round(cx - bw / 2)
+    const y = Math.round(cy - bh / 2)
+    const b = 4
+    ctx.fillStyle = C.black
+    ctx.fillRect(x - 2, y - 2, bw + 4, bh + 4)
+    ctx.fillStyle = 'rgba(0,0,0,0.5)'
+    ctx.fillRect(x + b, y + bh, bw, b)
+    ctx.fillRect(x + bw, y + b, b,  bh)
+    ctx.fillStyle = color
+    ctx.fillRect(x, y, bw, bh)
+    ctx.fillStyle = 'rgba(255,255,255,0.30)'
+    ctx.fillRect(x, y, bw, b)
+    ctx.fillRect(x, y, b,  bh)
+    ctx.fillStyle = 'rgba(0,0,0,0.25)'
+    ctx.fillRect(x,      y + bh - b, bw, b)
+    ctx.fillRect(x + bw - b, y,      b,  bh)
+    ctx.textAlign = 'center'
+    ctx.fillStyle = C.white
+    ctx.font = `bold ${Math.round(bh * 0.38)}px 'Courier New', monospace`
     ctx.fillText(text, cx, cy + bh * 0.14)
+  }
+
+  // Keep for Game.js compatibility
+  _drawButton(_ctx, cx, cy, bw, bh, text, color) {
+    this._btn(cx, cy, bw, bh, text, color)
   }
 
   hitButton(cx, cy, bw, bh, px, py) {
     return px >= cx - bw / 2 && px <= cx + bw / 2 &&
-      py >= cy - bh / 2 && py <= cy + bh / 2
+           py >= cy - bh / 2 && py <= cy + bh / 2
   }
 }
