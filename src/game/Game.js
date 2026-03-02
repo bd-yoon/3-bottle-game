@@ -72,19 +72,19 @@ export class Game {
 
     // ── Bases ────────────────────────────────────────────────────────────────
     const playerBase = new Base({ x: pBx,  y: pBy,  radius: baseRadius, owner: 'player', color: '#f9a8d4', label: '카피바라' })
-    const ai1Base    = new Base({ x: a1Bx, y: a1By, radius: baseRadius, owner: 'ai1',    color: '#a5b4fc', label: '판다' })
-    const ai2Base    = new Base({ x: a2Bx, y: a2By, radius: baseRadius, owner: 'ai2',    color: '#fde68a', label: '골든' })
+    const ai1Base    = new Base({ x: a1Bx, y: a1By, radius: baseRadius, owner: 'ai1',    color: '#a5b4fc', label: '팬더' })
+    const ai2Base    = new Base({ x: a2Bx, y: a2By, radius: baseRadius, owner: 'ai2',    color: '#fde68a', label: '골댕이' })
 
     // ── Players ──────────────────────────────────────────────────────────────
     const bounds = { w, h }
 
-    this.playerEntity = new Player({ x: pBx, y: pBy, type: 'player', base: playerBase, color: '#f9a8d4', label: 'CAPI', emoji: '🦫' })
+    this.playerEntity = new Player({ x: pBx, y: pBy, type: 'player', base: playerBase, color: '#f9a8d4', label: '카피바라', emoji: '🦫' })
     this.playerEntity._bounds = bounds
 
-    const ai1 = new AIPlayer({ x: a1Bx, y: a1By, type: 'ai1', base: ai1Base, color: '#a5b4fc', label: 'PANDA', emoji: '🐼', difficulty: diff })
+    const ai1 = new AIPlayer({ x: a1Bx, y: a1By, type: 'ai1', base: ai1Base, color: '#a5b4fc', label: '팬더', emoji: '🐼', difficulty: diff })
     ai1._bounds = bounds
 
-    const ai2 = new AIPlayer({ x: a2Bx, y: a2By, type: 'ai2', base: ai2Base, color: '#fde68a', label: 'GOLDIE', emoji: '🐕', difficulty: diff })
+    const ai2 = new AIPlayer({ x: a2Bx, y: a2By, type: 'ai2', base: ai2Base, color: '#fde68a', label: '골댕이', emoji: '🐕', difficulty: diff })
     ai2._bounds = bounds
 
     this.players = [this.playerEntity, ai1, ai2]
