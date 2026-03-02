@@ -185,18 +185,22 @@ export class SoundManager {
     })
   }
 
-  /** 클리어 — 아싸! G4→B4→D5→G5 빠른 상승 팡파르 */
+  /** 클리어 — 팡파르! 4단계 구조: 상승 트럼펫 콜 → 강조 → 후퇴 재상승 → 화음 클라이맥스 */
   playClear() {
-    // square 파형 = 밝고 통쾌한 칩튠 팡파르
-    [
-      [392, 392, 0.10, 0   ],  // G4
-      [494, 494, 0.10, 0.1 ],  // B4
-      [587, 587, 0.10, 0.2 ],  // D5
-      [784, 830, 0.45, 0.32],  // G5 (상향 슬라이드로 "아싸!" 느낌)
-      [784, 784, 0.25, 0.85],  // G5 여운
-    ].forEach(([freq, endFreq, dur, delay]) => {
-      this._blip({ freq, endFreq, dur, type: 'square', gain: 0.50, delay })
-    })
+    // Phase 1 — G4→B4→D5→G5 빠른 트럼펫 콜 (sawtooth = 금관악기 배음)
+    [[392,0],[494,0.07],[587,0.14],[784,0.21]].forEach(([f,d]) =>
+      this._blip({ freq:f, endFreq:f, dur:0.10, type:'sawtooth', gain:0.38, delay:d })
+    )
+    // Phase 2 — G5 첫 도달 강조 (square = 칩튠 펀치)
+    this._blip({ freq:784, endFreq:784, dur:0.22, type:'square', gain:0.52, delay:0.34 })
+    // Phase 3 — B4→D5 잠깐 후퇴 후 재상승 (기대감 고조)
+    this._blip({ freq:494, endFreq:494, dur:0.07, type:'square', gain:0.42, delay:0.60 })
+    this._blip({ freq:587, endFreq:587, dur:0.07, type:'square', gain:0.42, delay:0.69 })
+    // Phase 4 — 클라이맥스: G5+D5 동시 화음 + 상향 슬라이드 (볼륨감 + 아싸! 느낌)
+    this._blip({ freq:784, endFreq:855, dur:0.65, type:'square', gain:0.50, delay:0.80 })  // G5 멜로디
+    this._blip({ freq:587, endFreq:635, dur:0.65, type:'square', gain:0.25, delay:0.80 })  // D5 화음
+    // Phase 5 — 여운 G5
+    this._blip({ freq:784, endFreq:784, dur:0.32, type:'square', gain:0.35, delay:1.50 })
   }
 
   // ── BGM ────────────────────────────────────────────────────────────────────
