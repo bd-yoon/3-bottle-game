@@ -9,12 +9,14 @@ import { distance, normalize } from '../../utils/math.js'
 export function getDifficultyParams(level) {
   const l = Math.max(1, level)
   return {
-    // L1=0.72, L5=0.84, L10=0.95, L20=1.07, L40=1.18 ...
-    speedMult: 0.72 + 0.035 * Math.log2(l),
-    // L1=0.14s, L3=0.10s, L6=0.07s, L12=0.04s, L25+=0.02s(floor)
-    thinkInterval: Math.max(0.02, 0.14 * Math.pow(0.85, l - 1)),
-    // L1=0, L5=0.24, L10=0.54, L16=0.9(cap)
-    stealWeight: Math.min(0.9, (l - 1) * 0.06),
+    // 전반적 속도 상향: L1=0.80, L5=0.89, L10=1.00, L20=1.11 ...
+    speedMult: 0.80 + 0.04 * Math.log2(l),
+    // 반응 빠르게: L1=0.10s, L5=0.053s, L10=0.027s, L18+=0.02s(floor)
+    thinkInterval: Math.max(0.02, 0.10 * Math.pow(0.85, l - 1)),
+    // 일반 훔치기 공격성: L1=0.15, L5=0.43, L10=0.78, L12+=0.9(cap)
+    stealWeight: Math.min(0.9, 0.15 + (l - 1) * 0.075),
+    // 플레이어 집중 공략: L1=0.25, L5=0.57, L9+=1.0(cap) — 항상 AI끼리보다 플레이어를 더 노림
+    playerHarassWeight: Math.min(1.0, 0.25 + (l - 1) * 0.10),
   }
 }
 
@@ -23,8 +25,9 @@ export class AIPlayer extends Player {
     super(opts)
     const diff = opts.difficulty || getDifficultyParams(1)
     this._speedMult = diff.speedMult
-    this._thinkInterval = diff.thinkInterval + Math.random() * 0.03
+    this._thinkInterval = diff.thinkInterval + Math.random() * 0.02
     this._stealWeight = diff.stealWeight
+    this._playerHarassWeight = diff.playerHarassWeight
     this._target = null
     this._thinkTimer = 0
   }
@@ -71,15 +74,20 @@ export class AIPlayer extends Player {
       const distToBase = distance(bottle, this.base)
 
       // 상대 베이스 안의 사과는 stealWeight에 따라 페널티 감소
-      // stealWeight=0: 패널티 60 (거의 안 훔침)
-      // stealWeight=0.9: 패널티 6 (적극적으로 훔침)
+      // 플레이어 베이스는 playerHarassWeight로 별도 강화 보너스 적용
       let penalty = 0
       if (bottle.base !== null) {
-        const basePenalty = 60 * (1 - this._stealWeight)
-        // 플레이어 베이스는 추가 공격 보너스
         const isPlayerBase = bottle.base.owner === 'player'
-        const aggBonus = isPlayerBase ? this._stealWeight * 20 : 0
-        penalty = basePenalty - aggBonus
+        if (isPlayerBase) {
+          // 플레이어 베이스 전용: 거리 불리를 극복하도록 강한 보너스
+          // L1: 60*0.75 - 0.25*50 = 45-12.5 = 32.5
+          // L5: 60*0.57 - 0.57*50 = 34.2-28.5 = 5.7  (중립 수준)
+          // L9+: 음수 → 중앙 사과보다 플레이어 베이스를 더 선호
+          penalty = 60 * (1 - this._stealWeight) - this._playerHarassWeight * 50
+        } else {
+          // AI끼리: 일반 stealWeight만 적용 (플레이어보다 덜 노림)
+          penalty = 60 * (1 - this._stealWeight) + 15
+        }
       }
 
       const score = distToMe + 0.4 * distToBase + penalty
