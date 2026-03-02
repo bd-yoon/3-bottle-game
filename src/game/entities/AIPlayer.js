@@ -15,7 +15,7 @@ export function getDifficultyParams(level) {
   if (l <= 6) {
     const t = (l - 1) / 5  // 0(L1) → 1(L6)
     return {
-      speedMult:          0.50 + t * 0.28,   // L1=0.50, L6=0.78
+      speedMult:          0.70 + t * 0.08,   // L1=0.70, L6=0.78
       thinkInterval:      0.50 - t * 0.40,   // L1=0.50s, L6=0.10s
       stealWeight:        0.02 + t * 0.12,   // L1=0.02, L6=0.14
       playerHarassWeight: 0.02 + t * 0.22,   // L1=0.02, L6=0.24
