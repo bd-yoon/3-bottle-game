@@ -63,7 +63,7 @@ export class Renderer {
     ctx.textAlign = 'center'
     ctx.fillStyle = C.gold
     ctx.font = font(KR, Math.round(w * 0.10))
-    ctx.fillText('우다다! 사과는 다 내꺼!', w / 2, h * 0.265)
+    ctx.fillText('사과는 다 내꺼!', w / 2, h * 0.265)
 
     this._levelBadge(w / 2, h * 0.335, level, false)
 
