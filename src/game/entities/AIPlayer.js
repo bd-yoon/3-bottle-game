@@ -1,22 +1,16 @@
 import { Player, SPEED } from './Player.js'
 import { distance, normalize } from '../../utils/math.js'
 
-const AI_STATES = {
-  IDLE: 'idle',
-  FIND_BOTTLE: 'find_bottle',
-  RETURN_HOME: 'return_home',
-}
-
-// AI is slightly slower than player so human can compete
-const AI_SPEED = SPEED * 0.72
+// AI는 플레이어보다 약간 느리지만 판단은 더 빠름
+const AI_SPEED = SPEED * 0.82
 
 export class AIPlayer extends Player {
   constructor(opts) {
     super(opts)
-    this._aiState = AI_STATES.IDLE
     this._target = null
     this._thinkTimer = 0
-    this._thinkInterval = 0.4 + Math.random() * 0.3  // re-target every ~0.4-0.7s
+    // 매 0.1초마다 리타겟 (기존 0.4~0.7s → 대폭 단축)
+    this._thinkInterval = 0.08 + Math.random() * 0.05
   }
 
   update(dt, bottles, bases) {
@@ -26,7 +20,6 @@ export class AIPlayer extends Player {
       this._think(bottles, bases)
     }
 
-    // Drive toward current target
     if (this._target) {
       const dx = this._target.x - this.x
       const dy = this._target.y - this.y
@@ -42,36 +35,59 @@ export class AIPlayer extends Player {
   }
 
   _think(bottles, bases) {
+    // 들고 있으면 즉시 귀환
     if (this.carrying) {
-      // Head home
-      this._aiState = AI_STATES.RETURN_HOME
       this._target = this.base
+      return
+    }
+
+    // ── 점수 기반 타겟 선택 ────────────────────────────────────────────────────
+    // 모든 ground 상태 병 후보를 점수화
+    // 점수 = distToMe + 0.4 * distAppleToMyBase  (낮을수록 좋음)
+    // 단, 내 베이스에 이미 있는 병은 제외
+    let bestTarget = null
+    let bestScore = Infinity
+
+    for (const bottle of bottles) {
+      if (bottle.state !== 'ground') continue
+      if (bottle.base === this.base) continue
+
+      const distToMe = distance(this, bottle)
+      const distToBase = distance(bottle, this.base)
+      // 상대 베이스 안의 병은 꺼내기 어려우므로 패널티 부여
+      const inEnemyBase = bottle.base !== null
+      const penalty = inEnemyBase ? 60 : 0
+
+      const score = distToMe + 0.4 * distToBase + penalty
+      if (score < bestScore) {
+        bestScore = score
+        bestTarget = bottle
+      }
+    }
+
+    if (bestTarget) {
+      this._target = bestTarget
+      return
+    }
+
+    // ── ground 병이 없으면 상대 베이스 병 훔치기 ──────────────────────────────
+    // 가장 병이 많은 상대 베이스 선택 (높은 곳이 훔칠 가치가 높음)
+    let stealBase = null
+    let maxCount = 0
+
+    for (const base of bases) {
+      if (base === this.base) continue
+      if (base.bottleCount > maxCount) {
+        maxCount = base.bottleCount
+        stealBase = base
+      }
+    }
+
+    if (stealBase && stealBase.bottleCount > 0) {
+      // 해당 베이스로 이동 (진입하면 Player.update의 auto-pickup이 처리)
+      this._target = stealBase
     } else {
-      // Find nearest accessible bottle (ground state, not already in own base)
-      let nearest = null
-      let nearestDist = Infinity
-
-      for (const bottle of bottles) {
-        if (bottle.state !== 'ground') continue
-        // Avoid targeting bottles already in own base
-        if (bottle.base === this.base) continue
-
-        const d = distance(this, bottle)
-        if (d < nearestDist) {
-          nearestDist = d
-          nearest = bottle
-        }
-      }
-
-      if (nearest) {
-        this._aiState = AI_STATES.FIND_BOTTLE
-        this._target = nearest
-      } else {
-        this._aiState = AI_STATES.IDLE
-        this._target = null
-        this.vx = 0
-        this.vy = 0
-      }
+      this._target = null
     }
   }
 }
