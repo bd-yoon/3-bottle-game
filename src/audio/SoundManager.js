@@ -1,8 +1,8 @@
 // src/audio/SoundManager.js
 // Web Audio API 기반 사운드 합성 — 외부 파일 불필요, 저작권 없음
 
-const BPM  = 138
-const BEAT = 60 / BPM  // ≈ 0.435s per quarter note
+const BPM  = 168
+const BEAT = 60 / BPM  // ≈ 0.357s per quarter note
 
 // ── 배경음 멜로디 시퀀스 [Hz, beats] ──────────────────────────────────────────
 // 32비트 루프 (≈13.9s), C 장조 기반 경쾌한 칩튠
@@ -91,13 +91,20 @@ export class SoundManager {
   startBGM() {
     if (!this._ctx || this._bgActive) return
     this._bgActive = true
+    // 이전에 gain이 0으로 내려간 경우 복원
+    this._bgGain.gain.cancelScheduledValues(this._ctx.currentTime)
+    this._bgGain.gain.setValueAtTime(0.18, this._ctx.currentTime)
     this._scheduleBGM(this._ctx.currentTime)
   }
 
-  /** 배경음 정지 */
+  /** 배경음 정지 — bgGain을 즉시 0으로 내려 이미 스케줄된 노드도 무음 처리 */
   stopBGM() {
     this._bgActive = false
     clearTimeout(this._bgTimer)
+    if (this._bgGain) {
+      this._bgGain.gain.cancelScheduledValues(this._ctx.currentTime)
+      this._bgGain.gain.setValueAtTime(0, this._ctx.currentTime)
+    }
   }
 
   // ── private ─────────────────────────────────────────────────────────────────
