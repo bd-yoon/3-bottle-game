@@ -2,12 +2,15 @@ import { Player, SPEED } from './Player.js'
 import { distance, normalize } from '../../utils/math.js'
 
 // ── 난이도 파라미터 계산 ──────────────────────────────────────────────────────
-// 구간 1 — 온보딩 (L1~6): 선형 완만 상승, 레벨 1~3은 매우 쉬움
-//   L1: speed=0.50, think=0.50s, steal=0.02, harass=0.02  (거의 산책 수준)
-//   L6: speed=0.78, think=0.10s, steal=0.14, harass=0.24  (메인 L7 직전)
+// 이동속도(speedMult)는 전 레벨 1.0 고정 — 플레이어와 항상 동일
+// 난이도는 반응속도(thinkInterval)와 공격성(stealWeight, playerHarassWeight)으로만 조절
+//
+// 구간 1 — 온보딩 (L1~6): 선형 완만 상승
+//   L1: think=0.50s, steal=0.02, harass=0.02  (거의 움직이지 않는 수준)
+//   L6: think=0.10s, steal=0.14, harass=0.24  (메인 L7 직전)
 // 구간 2 — 메인 (L7+): 구버전 L1 난이도에서 시작, 무한 상승
-//   L7 (dl=1): speed=0.80, think=0.10s, steal=0.15, harass=0.25
-//   L10(dl=4): speed=0.88, think=0.061s, steal=0.375, harass=0.55
+//   L7 (dl=1): think=0.10s, steal=0.15, harass=0.25
+//   L10(dl=4): think=0.061s, steal=0.375, harass=0.55
 export function getDifficultyParams(level) {
   const l = Math.max(1, level)
 
@@ -15,7 +18,7 @@ export function getDifficultyParams(level) {
   if (l <= 6) {
     const t = (l - 1) / 5  // 0(L1) → 1(L6)
     return {
-      speedMult:          0.70 + t * 0.08,   // L1=0.70, L6=0.78
+      speedMult:          1.0,
       thinkInterval:      0.50 - t * 0.40,   // L1=0.50s, L6=0.10s
       stealWeight:        0.02 + t * 0.12,   // L1=0.02, L6=0.14
       playerHarassWeight: 0.02 + t * 0.22,   // L1=0.02, L6=0.24
@@ -23,10 +26,9 @@ export function getDifficultyParams(level) {
   }
 
   // ── 메인 구간 L7+ ─────────────────────────────────────────────────────────
-  // dl=1이 구버전 L1과 동일, 이후 무한 상승
   const dl = l - 6
   return {
-    speedMult:          0.80 + 0.04 * Math.log2(dl),
+    speedMult:          1.0,
     thinkInterval:      Math.max(0.02, 0.10 * Math.pow(0.85, dl - 1)),
     stealWeight:        Math.min(0.9, 0.15 + (dl - 1) * 0.075),
     playerHarassWeight: Math.min(1.0, 0.25 + (dl - 1) * 0.10),
