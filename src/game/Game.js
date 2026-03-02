@@ -149,6 +149,11 @@ export class Game {
         this._winner = this.players.find(p => p.base === base)
         this._state = this._winner.type === 'player' ? GAME_STATES.WIN : GAME_STATES.LOSE
         this.sound.stopBGM()
+        if (this._state === GAME_STATES.WIN) {
+          this.sound.playClear()
+        } else {
+          this.sound.playGameOver()
+        }
         this._syncJoystickZone()
         return
       }
