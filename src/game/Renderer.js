@@ -87,10 +87,15 @@ export class Renderer {
       ctx.fillText(c.label, cx, cy + r + 18)
     })
 
-    ctx.fillStyle = '#a0d890'
-    ctx.font = font(KR, Math.round(w * 0.032))
+    ctx.fillStyle = '#c8f0a8'
+    ctx.font = font(KR, Math.round(w * 0.027))
     ctx.textAlign = 'center'
-    ctx.fillText('사과 3개를 먼저 모으면 승리!', w / 2, h * 0.685)
+    ctx.fillText('🕹 조이스틱으로 이동 · 사과를 집어 내 진영으로!', w / 2, h * 0.630)
+
+    ctx.fillStyle = '#a0d890'
+    ctx.font = font(KR, Math.round(w * 0.030))
+    ctx.textAlign = 'center'
+    ctx.fillText('🍎 먼저 3개 모으면 승리!', w / 2, h * 0.683)
 
     this._btn(w / 2, h * 0.765, w * 0.62, 52, '▶  게임 시작', '#2a6e3a')
   }
