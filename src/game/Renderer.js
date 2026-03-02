@@ -37,20 +37,23 @@ export class Renderer {
     this._drawHUD(state, w, h)
   }
 
-  drawTitle(w, h) {
+  drawTitle(w, h, level) {
     const { ctx } = this
     this._clearBackground(w, h)
     this._drawField(w, h)
     this._drawTrees()
 
     // Title card
-    this._roundRect(ctx, w * 0.08, h * 0.18, w * 0.84, h * 0.55, 28,
+    this._roundRect(ctx, w * 0.08, h * 0.15, w * 0.84, h * 0.58, 28,
       'rgba(0,30,0,0.55)', 'rgba(100,200,100,0.35)')
 
     ctx.textAlign = 'center'
     ctx.fillStyle = '#e8f5e9'
     ctx.font = `bold ${Math.round(w * 0.085)}px sans-serif`
-    ctx.fillText('🍎 3 Apple Game', w / 2, h * 0.30)
+    ctx.fillText('🍎 3 Apple Game', w / 2, h * 0.27)
+
+    // Level badge
+    this._drawLevelBadge(ctx, w / 2, h * 0.35, level, false)
 
     // Character preview row
     const chars = [
@@ -61,65 +64,128 @@ export class Renderer {
     const spacing = w / (chars.length + 1)
     chars.forEach((c, i) => {
       const cx = spacing * (i + 1)
-      const cy = h * 0.46
+      const cy = h * 0.50
 
       ctx.beginPath()
-      ctx.arc(cx, cy, 30, 0, Math.PI * 2)
+      ctx.arc(cx, cy, 28, 0, Math.PI * 2)
       ctx.fillStyle = c.color + '44'
       ctx.fill()
       ctx.strokeStyle = c.color
       ctx.lineWidth = 2
       ctx.stroke()
 
-      ctx.font = '32px serif'
+      ctx.font = '30px serif'
       ctx.textAlign = 'center'
-      ctx.fillText(c.emoji, cx, cy + 11)
+      ctx.fillText(c.emoji, cx, cy + 10)
 
-      ctx.font = `bold ${Math.round(w * 0.03)}px sans-serif`
+      ctx.font = `bold ${Math.round(w * 0.028)}px sans-serif`
       ctx.fillStyle = c.color
-      ctx.fillText(c.label, cx, cy + 50)
+      ctx.fillText(c.label, cx, cy + 46)
     })
 
     ctx.fillStyle = '#c8e6c9'
-    ctx.font = `${Math.round(w * 0.038)}px sans-serif`
-    ctx.fillText('먼저 3개 사과를 모으면 승리!', w / 2, h * 0.63)
+    ctx.font = `${Math.round(w * 0.036)}px sans-serif`
+    ctx.fillText('먼저 3개 사과를 모으면 승리!', w / 2, h * 0.67)
 
     this._drawButton(ctx, w / 2, h * 0.76, w * 0.55, 52, '게임 시작', '#2d6a4f')
   }
 
-  drawGameOver(winner, w, h) {
+  // ── 승리 화면 ─────────────────────────────────────────────────────────────────
+  drawWin(w, h, level) {
     const { ctx } = this
     this._clearBackground(w, h)
     this._drawField(w, h)
     this._drawTrees()
 
-    ctx.fillStyle = 'rgba(0,0,0,0.55)'
+    ctx.fillStyle = 'rgba(0,0,0,0.45)'
     ctx.fillRect(0, 0, w, h)
 
-    this._roundRect(ctx, w * 0.08, h * 0.22, w * 0.84, h * 0.5, 28,
-      'rgba(10,30,10,0.92)', 'rgba(100,200,100,0.3)')
+    this._roundRect(ctx, w * 0.07, h * 0.18, w * 0.86, h * 0.62, 28,
+      'rgba(0,40,0,0.92)', 'rgba(100,220,100,0.4)')
 
     ctx.textAlign = 'center'
 
-    const isPlayerWin = winner.type === 'player'
-    const resultText = isPlayerWin ? '🎉 승리!' : '😢 패배...'
-    const subText = isPlayerWin
-      ? `${winner.label}가 사과 3개를 모았어요!`
-      : `${winner.label}가 먼저 사과 3개를 모았어요!`
+    ctx.font = `bold ${Math.round(w * 0.11)}px sans-serif`
+    ctx.fillStyle = '#fde68a'
+    ctx.fillText('🎉 클리어!', w / 2, h * 0.32)
+
+    // 레벨 완료 표시
+    ctx.font = `${Math.round(w * 0.042)}px sans-serif`
+    ctx.fillStyle = '#c8e6c9'
+    ctx.fillText(`레벨 ${level} 완료!`, w / 2, h * 0.42)
+
+    // 다음 레벨 프리뷰
+    this._drawLevelBadge(ctx, w / 2, h * 0.52, level + 1, true)
+
+    ctx.font = `${Math.round(w * 0.034)}px sans-serif`
+    ctx.fillStyle = '#86efac'
+    ctx.fillText('난이도가 올라갔어요!', w / 2, h * 0.62)
+
+    this._drawButton(ctx, w / 2, h * 0.74, w * 0.58, 56, `레벨 ${level + 1} 시작 →`, '#15803d')
+  }
+
+  // ── 패배 화면 ─────────────────────────────────────────────────────────────────
+  drawLose(w, h, level, winner, adLoading) {
+    const { ctx } = this
+    this._clearBackground(w, h)
+    this._drawField(w, h)
+    this._drawTrees()
+
+    ctx.fillStyle = 'rgba(0,0,0,0.6)'
+    ctx.fillRect(0, 0, w, h)
+
+    this._roundRect(ctx, w * 0.07, h * 0.18, w * 0.86, h * 0.68, 28,
+      'rgba(20,0,0,0.92)', 'rgba(200,100,100,0.3)')
+
+    ctx.textAlign = 'center'
 
     ctx.font = `bold ${Math.round(w * 0.1)}px sans-serif`
-    ctx.fillStyle = isPlayerWin ? '#fde68a' : '#a5b4fc'
-    ctx.fillText(resultText, w / 2, h * 0.37)
+    ctx.fillStyle = '#fca5a5'
+    ctx.fillText('😢 패배...', w / 2, h * 0.30)
 
-    ctx.font = `40px serif`
+    ctx.font = `36px serif`
     ctx.fillStyle = '#fff'
-    ctx.fillText(winner.emoji, w / 2, h * 0.48)
+    ctx.fillText(winner.emoji, w / 2, h * 0.40)
 
-    ctx.font = `${Math.round(w * 0.04)}px sans-serif`
-    ctx.fillStyle = '#c8e6c9'
-    ctx.fillText(subText, w / 2, h * 0.56)
+    ctx.font = `${Math.round(w * 0.038)}px sans-serif`
+    ctx.fillStyle = '#fecaca'
+    ctx.fillText(`${winner.label}이 사과 3개를 먼저 모았어요!`, w / 2, h * 0.49)
 
-    this._drawButton(ctx, w / 2, h * 0.74, w * 0.55, 52, '다시 하기', '#2d6a4f')
+    // 현재 레벨 표시
+    this._drawLevelBadge(ctx, w / 2, h * 0.56, level, false)
+
+    // 광고 버튼
+    if (adLoading) {
+      this._drawButton(ctx, w / 2, h * 0.68, w * 0.75, 52, '광고 로딩 중...', '#6b7280')
+    } else {
+      this._drawButton(ctx, w / 2, h * 0.68, w * 0.75, 52, '📺  광고 보고 다시 도전', '#b45309')
+    }
+
+    // 처음부터 버튼
+    this._drawButton(ctx, w / 2, h * 0.79, w * 0.55, 44, '처음부터 (레벨 1)', '#374151')
+
+    if (adLoading) {
+      // 로딩 오버레이 힌트
+      ctx.fillStyle = 'rgba(0,0,0,0.3)'
+      ctx.fillRect(0, 0, w, h)
+      ctx.fillStyle = '#fff'
+      ctx.font = `bold ${Math.round(w * 0.045)}px sans-serif`
+      ctx.fillText('광고 준비 중...', w / 2, h / 2)
+    }
+  }
+
+  // ── 레벨 배지 ─────────────────────────────────────────────────────────────────
+  _drawLevelBadge(ctx, cx, cy, level, isNext) {
+    const bw = 160
+    const bh = 40
+    const color = isNext ? '#15803d' : '#2d6a4f'
+    this._roundRect(ctx, cx - bw / 2, cy - bh / 2, bw, bh, 12,
+      color + 'cc', 'rgba(255,255,255,0.25)')
+    ctx.textAlign = 'center'
+    ctx.fillStyle = '#fff'
+    ctx.font = `bold 16px sans-serif`
+    const label = isNext ? `NEXT  Lv.${level}` : `Lv.${level}`
+    ctx.fillText(label, cx, cy + 6)
   }
 
   // ── Background & field ───────────────────────────────────────────────────────
