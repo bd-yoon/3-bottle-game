@@ -5,6 +5,7 @@ import { Base } from './entities/Base.js'
 import { Renderer } from './Renderer.js'
 import { Joystick } from '../input/Joystick.js'
 import { showRewardedAd } from '../lib/adsInToss.js'
+import { SoundManager } from '../audio/SoundManager.js'
 
 const WIN_COUNT = 3
 const BOTTLE_COUNT = 5
@@ -37,6 +38,8 @@ export class Game {
     this._adLoading = false   // 광고 로딩 중 플래그
     this._rafId = null
     this._lastTime = 0
+
+    this.sound = new SoundManager()
 
     this._setupResize()
     this._setupInput()
@@ -105,6 +108,10 @@ export class Game {
     this._adLoading = false
     this._state = GAME_STATES.PLAYING
     this._syncJoystickZone()
+
+    // BGM 재시작 (레벨업/재도전 시 끊김 없이)
+    this.sound.stopBGM()
+    this.sound.startBGM()
   }
 
   // ── 메인 루프 ───────────────────────────────────────────────────────────────
@@ -120,6 +127,9 @@ export class Game {
   _update(dt) {
     if (this._state !== GAME_STATES.PLAYING) return
 
+    // 득점 감지용 이전 카운트
+    const prevCounts = this.bases.map(b => b.bottleCount)
+
     this.playerEntity.vx = this.joystick.x * SPEED
     this.playerEntity.vy = this.joystick.y * SPEED
 
@@ -127,10 +137,18 @@ export class Game {
       player.update(dt, this.bottles, this.bases)
     }
 
+    // 플레이어 베이스에 사과가 추가됐으면 득점음
+    this.bases.forEach((base, i) => {
+      if (base.owner === 'player' && base.bottleCount > prevCounts[i]) {
+        this.sound.playScore()
+      }
+    })
+
     for (const base of this.bases) {
       if (base.bottleCount >= WIN_COUNT) {
         this._winner = this.players.find(p => p.base === base)
         this._state = this._winner.type === 'player' ? GAME_STATES.WIN : GAME_STATES.LOSE
+        this.sound.stopBGM()
         this._syncJoystickZone()
         return
       }
@@ -171,6 +189,9 @@ export class Game {
   _handleClick(e) {
     if (this._adLoading) return   // 광고 로딩 중 버튼 비활성
 
+    // 최초 터치에서 Web Audio 컨텍스트 활성화
+    this.sound.init()
+
     const rect = this.canvas.getBoundingClientRect()
     const px = (e.clientX - rect.left) * (this.canvas.width / rect.width)
     const py = (e.clientY - rect.top) * (this.canvas.height / rect.height)
@@ -179,19 +200,23 @@ export class Game {
 
     if (this._state === GAME_STATES.TITLE) {
       if (this.renderer.hitButton(w / 2, h * 0.76, w * 0.55, 52, px, py)) {
+        this.sound.playClick()
         this._startGame(this._level)
       }
     } else if (this._state === GAME_STATES.WIN) {
       if (this.renderer.hitButton(w / 2, h * 0.74, w * 0.58, 56, px, py)) {
+        this.sound.playClick()
         this._startGame(this._level + 1)
       }
     } else if (this._state === GAME_STATES.LOSE) {
       // 광고 보고 다시 도전
       if (this.renderer.hitButton(w / 2, h * 0.68, w * 0.75, 52, px, py)) {
+        this.sound.playClick()
         this._handleAdRetry()
       }
       // 처음부터 (레벨 1)
       if (this.renderer.hitButton(w / 2, h * 0.79, w * 0.55, 44, px, py)) {
+        this.sound.playClick()
         saveLevel(1)
         this._level = 1
         this._state = GAME_STATES.TITLE
