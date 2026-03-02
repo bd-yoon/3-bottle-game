@@ -1,0 +1,19 @@
+{
+  "name": "3-bottle-game",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "granite:build": "granite build"
+  },
+  "devDependencies": {
+    "vite": "^7.3.1"
+  },
+  "dependencies": {
+    "@apps-in-toss/web-framework": "^1.14.1",
+    "nipplejs": "^0.10.2"
+  }
+}
