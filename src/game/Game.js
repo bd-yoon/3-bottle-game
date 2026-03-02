@@ -18,7 +18,8 @@ export class Game {
   constructor(canvas) {
     this.canvas = canvas
     this.renderer = new Renderer(canvas)
-    this.joystick = new Joystick(document.getElementById('joystick-zone'))
+    this._joystickZone = document.getElementById('joystick-zone')
+    this.joystick = new Joystick(this._joystickZone)
     this._state = GAME_STATES.TITLE
     this._winner = null
     this._rafId = null
@@ -26,6 +27,7 @@ export class Game {
 
     this._setupResize()
     this._setupInput()
+    this._syncJoystickZone()
   }
 
   start() {
@@ -123,6 +125,7 @@ export class Game {
 
     this._winner = null
     this._state = GAME_STATES.PLAYING
+    this._syncJoystickZone()
   }
 
   // ── Main loop ───────────────────────────────────────────────────────────────
@@ -156,6 +159,7 @@ export class Game {
         const winner = this.players.find(p => p.base === base)
         this._winner = winner
         this._state = GAME_STATES.GAME_OVER
+        this._syncJoystickZone()
         return
       }
     }
@@ -211,6 +215,15 @@ export class Game {
         this._startGame()
       }
     }
+  }
+
+  // ── Joystick zone visibility ─────────────────────────────────────────────────
+
+  _syncJoystickZone() {
+    // PLAYING 상태일 때만 조이스틱 zone이 포인터 이벤트를 받음
+    // 나머지(TITLE, GAME_OVER)는 pointer-events:none으로 캔버스 클릭이 통과
+    this._joystickZone.style.pointerEvents =
+      this._state === GAME_STATES.PLAYING ? 'auto' : 'none'
   }
 
   // ── Resize ───────────────────────────────────────────────────────────────────
