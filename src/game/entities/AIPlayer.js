@@ -2,21 +2,34 @@ import { Player, SPEED } from './Player.js'
 import { distance, normalize } from '../../utils/math.js'
 
 // ── 난이도 파라미터 계산 ──────────────────────────────────────────────────────
-// 레벨이 올라갈수록:
-//   - AI 속도 증가 (로그 스케일, 상한 없음)
-//   - 반응 속도 증가 (지수 감소, 최소 0.02s)
-//   - 훔치기 공격성 증가 (선형, 최대 0.9)
+// 구간 1 — 온보딩 (L1~6): 선형 완만 상승, 레벨 1~3은 매우 쉬움
+//   L1: speed=0.50, think=0.50s, steal=0.02, harass=0.02  (거의 산책 수준)
+//   L6: speed=0.78, think=0.10s, steal=0.14, harass=0.24  (메인 L7 직전)
+// 구간 2 — 메인 (L7+): 구버전 L1 난이도에서 시작, 무한 상승
+//   L7 (dl=1): speed=0.80, think=0.10s, steal=0.15, harass=0.25
+//   L10(dl=4): speed=0.88, think=0.061s, steal=0.375, harass=0.55
 export function getDifficultyParams(level) {
   const l = Math.max(1, level)
+
+  // ── 온보딩 구간 L1~6 ─────────────────────────────────────────────────────
+  if (l <= 6) {
+    const t = (l - 1) / 5  // 0(L1) → 1(L6)
+    return {
+      speedMult:          0.50 + t * 0.28,   // L1=0.50, L6=0.78
+      thinkInterval:      0.50 - t * 0.40,   // L1=0.50s, L6=0.10s
+      stealWeight:        0.02 + t * 0.12,   // L1=0.02, L6=0.14
+      playerHarassWeight: 0.02 + t * 0.22,   // L1=0.02, L6=0.24
+    }
+  }
+
+  // ── 메인 구간 L7+ ─────────────────────────────────────────────────────────
+  // dl=1이 구버전 L1과 동일, 이후 무한 상승
+  const dl = l - 6
   return {
-    // 전반적 속도 상향: L1=0.80, L5=0.89, L10=1.00, L20=1.11 ...
-    speedMult: 0.80 + 0.04 * Math.log2(l),
-    // 반응 빠르게: L1=0.10s, L5=0.053s, L10=0.027s, L18+=0.02s(floor)
-    thinkInterval: Math.max(0.02, 0.10 * Math.pow(0.85, l - 1)),
-    // 일반 훔치기 공격성: L1=0.15, L5=0.43, L10=0.78, L12+=0.9(cap)
-    stealWeight: Math.min(0.9, 0.15 + (l - 1) * 0.075),
-    // 플레이어 집중 공략: L1=0.25, L5=0.57, L9+=1.0(cap) — 항상 AI끼리보다 플레이어를 더 노림
-    playerHarassWeight: Math.min(1.0, 0.25 + (l - 1) * 0.10),
+    speedMult:          0.80 + 0.04 * Math.log2(dl),
+    thinkInterval:      Math.max(0.02, 0.10 * Math.pow(0.85, dl - 1)),
+    stealWeight:        Math.min(0.9, 0.15 + (dl - 1) * 0.075),
+    playerHarassWeight: Math.min(1.0, 0.25 + (dl - 1) * 0.10),
   }
 }
 
