@@ -169,7 +169,7 @@ export class Game {
         this.renderer.drawWin(w, h, this._level, this._lastEarned, pointManager.getTotalPoints(), pointManager.getTodayEarned(), pointManager.canWithdraw(), !pointManager.canEarnToday())
         break
       case GAME_STATES.LOSE:
-        this.renderer.drawLose(w, h, this._level, this._winner, this._adLoading)
+        this.renderer.drawLose(w, h, this._level, this._winner, this._adLoading, pointManager.getTotalPoints())
         break
       case GAME_STATES.DAILY_LIMIT:
         this.renderer.drawDailyLimit(w, h, pointManager.getTotalPoints(), pointManager.canWithdraw())

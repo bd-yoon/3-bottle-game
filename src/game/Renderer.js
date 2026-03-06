@@ -166,7 +166,7 @@ export class Renderer {
     }
   }
 
-  drawLose(w, h, level, winner, adLoading) {
+  drawLose(w, h, level, winner, adLoading, totalPoints) {
     const { ctx } = this
     this._drawBg(w, h)
     ctx.fillStyle = 'rgba(0,0,0,0.60)'
@@ -188,6 +188,17 @@ export class Renderer {
     ctx.fillText(`${winner.label} 승리!`, w / 2, h * 0.465)
 
     this._levelBadge(w / 2, h * 0.530, level, false)
+
+    ctx.textAlign = 'center'
+    ctx.font = font(KR, Math.round(w * 0.028))
+    if (level === 1) {
+      ctx.fillStyle = '#fcd34d'
+      ctx.fillText('사과 3개 모으면 토스포인트 3원이에요', w / 2, h * 0.592)
+    } else {
+      const needed = Math.max(1, 10 - totalPoints)
+      ctx.fillStyle = '#50ff80'
+      ctx.fillText(`${needed}원만 더 모으면 토스포인트로 출금할 수 있어요`, w / 2, h * 0.592)
+    }
 
     if (adLoading) {
       this._btn(w / 2, h * 0.650, w * 0.80, 52, '로딩 중...', '#555')
