@@ -277,19 +277,29 @@ export class Game {
         }
       }
     } else if (this._state === GAME_STATES.WIN) {
-      // 다음 단계 시작 (단계 3 완료 또는 일일 한도 달성 시 DAILY_LIMIT으로)
-      if (this.renderer.hitButton(w / 2, h * 0.67, w * 0.70, 54, px, py)) {
-        this.sound.playClick()
-        if (this._level >= 3 || !pointManager.canEarnToday()) {
-          this._state = GAME_STATES.DAILY_LIMIT
-        } else {
+      const isFinalStage = this._level >= 3 || !pointManager.canEarnToday()
+      if (!isFinalStage) {
+        // 단계 1 & 2: 다음 단계 시작 버튼 (h*0.710)
+        if (this.renderer.hitButton(w / 2, h * 0.710, w * 0.70, 54, px, py)) {
+          this.sound.playClick()
           this._startGame(this._level + 1)
         }
-      }
-      // 출금하기 (조건부)
-      if (pointManager.canWithdraw() && this.renderer.hitButton(w / 2, h * 0.775, w * 0.60, 48, px, py)) {
-        this.sound.playClick()
-        this._showWithdrawModal = true
+      } else {
+        // 단계 3: 수확 완료 버튼 (h*0.615)
+        if (this.renderer.hitButton(w / 2, h * 0.615, w * 0.70, 54, px, py)) {
+          this.sound.playClick()
+          this._state = GAME_STATES.DAILY_LIMIT
+        }
+        // 토스 포인트로 교환하기 버튼 (h*0.730)
+        if (this.renderer.hitButton(w / 2, h * 0.730, w * 0.72, 52, px, py)) {
+          this.sound.playClick()
+          if (pointManager.canWithdraw()) {
+            this._showWithdrawModal = true
+          } else {
+            const needed = 10 - pointManager.getTotalPoints()
+            window.alert(`${needed}원 더 모으면 출금 가능해요! 내일 또 도전하세요 🍎`)
+          }
+        }
       }
     } else if (this._state === GAME_STATES.LOSE) {
       // 광고 보고 다시 도전

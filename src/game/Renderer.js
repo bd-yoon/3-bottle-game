@@ -125,30 +125,44 @@ export class Renderer {
     ctx.fillText(`단계 ${level} 완료!`, w / 2, h * 0.350)
 
     if (!isFinalStage) {
+      // 단계 1 & 2: 다음 단계 배지 + 포인트 표시 + 티저 + 다음 단계 버튼
       this._levelBadge(w / 2, h * 0.425, level + 1, true)
-    }
 
-    // 포인트 적립 표시
-    const pointY = isFinalStage ? h * 0.465 : h * 0.513
-    if (lastEarned > 0) {
-      ctx.fillStyle = '#50ff80'
-      ctx.font = font(KR, Math.round(w * 0.060))
-      ctx.fillText(`+${lastEarned}원 획득!`, w / 2, pointY)
+      if (lastEarned > 0) {
+        ctx.fillStyle = '#50ff80'
+        ctx.font = font(KR, Math.round(w * 0.060))
+        ctx.fillText(`+${lastEarned}원 획득!`, w / 2, h * 0.513)
+      } else {
+        ctx.fillStyle = '#a0d890'
+        ctx.font = font(KR, Math.round(w * 0.032))
+        ctx.fillText('오늘 한도 달성 — 내일 또 도전!', w / 2, h * 0.513)
+      }
+      ctx.fillStyle = '#fcd34d'
+      ctx.font = font(KR, Math.round(w * 0.030))
+      ctx.fillText(`누적 ${totalPoints}원  ·  오늘 ${todayEarned}/9원`, w / 2, h * 0.571)
+
+      ctx.fillStyle = '#f0c040'
+      ctx.font = font(KR, Math.round(w * 0.026))
+      ctx.fillText('💸 오늘 9원 모으면 토스 포인트로 출금 가능!', w / 2, h * 0.625)
+
+      this._btn(w / 2, h * 0.710, w * 0.70, 54, `▶  단계 ${level + 1} 시작`, '#1a6a2e')
     } else {
-      ctx.fillStyle = '#a0d890'
-      ctx.font = font(KR, Math.round(w * 0.032))
-      ctx.fillText('오늘 한도 달성 — 내일 또 도전!', w / 2, pointY)
-    }
-    ctx.fillStyle = '#fcd34d'
-    ctx.font = font(KR, Math.round(w * 0.030))
-    ctx.fillText(`누적 ${totalPoints}원  ·  오늘 ${todayEarned}/9원`, w / 2, pointY + h * 0.058)
+      // 단계 3: 포인트 표시 + 수확 완료 버튼 + 교환하기 버튼
+      if (lastEarned > 0) {
+        ctx.fillStyle = '#50ff80'
+        ctx.font = font(KR, Math.round(w * 0.060))
+        ctx.fillText(`+${lastEarned}원 획득!`, w / 2, h * 0.450)
+      } else {
+        ctx.fillStyle = '#a0d890'
+        ctx.font = font(KR, Math.round(w * 0.032))
+        ctx.fillText('오늘 한도 달성 — 내일 또 도전!', w / 2, h * 0.450)
+      }
+      ctx.fillStyle = '#fcd34d'
+      ctx.font = font(KR, Math.round(w * 0.030))
+      ctx.fillText(`누적 ${totalPoints}원  ·  오늘 ${todayEarned}/9원`, w / 2, h * 0.508)
 
-    this._btn(w / 2, h * 0.67, w * 0.70, 54,
-      isFinalStage ? '🎉  오늘 수확 완료!' : `▶  단계 ${level + 1} 시작`,
-      isFinalStage ? '#4a2a7a' : '#1a6a2e')
-
-    if (canWithdrawFlag) {
-      this._btn(w / 2, h * 0.775, w * 0.60, 48, '💸  출금하기', '#1a4a7a')
+      this._btn(w / 2, h * 0.615, w * 0.70, 54, '🎉  오늘 수확 완료!', '#4a2a7a')
+      this._btn(w / 2, h * 0.730, w * 0.72, 52, '💸  토스 포인트로 교환하기', '#1a4a7a')
     }
   }
 
