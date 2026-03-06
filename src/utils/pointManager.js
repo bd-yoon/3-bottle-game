@@ -46,6 +46,12 @@ export function canWithdraw() {
   return getTotalPoints() >= WITHDRAW_MIN
 }
 
+// 실제 출금 API 연동 시 호출 — 현재는 미사용 (mock 출금)
+export function subtractPoints(amount) {
+  const newTotal = Math.max(0, getTotalPoints() - amount)
+  localStorage.setItem(KEYS.POINTS, String(newTotal))
+}
+
 export function getTodayStage() {
   return Math.min(Math.floor(getTodayEarned() / PER_WIN) + 1, 3)
 }

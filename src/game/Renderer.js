@@ -71,7 +71,7 @@ export class Renderer {
     ctx.fillStyle = C.gold
     ctx.font = font(KR, Math.round(w * 0.038))
     ctx.textAlign = 'center'
-    ctx.fillText(`🍎 누적 ${totalPoints}원`, w / 2, h * 0.375)
+    ctx.fillText(`🍎 잔고 ${totalPoints}원`, w / 2, h * 0.375)
     ctx.fillStyle = '#a0d890'
     ctx.font = font(KR, Math.round(w * 0.028))
     ctx.fillText(`오늘 ${todayEarned}/9원 획득`, w / 2, h * 0.418)
@@ -139,7 +139,7 @@ export class Renderer {
       }
       ctx.fillStyle = '#fcd34d'
       ctx.font = font(KR, Math.round(w * 0.030))
-      ctx.fillText(`누적 ${totalPoints}원  ·  오늘 ${todayEarned}/9원`, w / 2, h * 0.571)
+      ctx.fillText(`잔고 ${totalPoints}원  ·  오늘 ${todayEarned}/9원`, w / 2, h * 0.571)
 
       ctx.fillStyle = '#f0c040'
       ctx.font = font(KR, Math.round(w * 0.026))
@@ -159,7 +159,7 @@ export class Renderer {
       }
       ctx.fillStyle = '#fcd34d'
       ctx.font = font(KR, Math.round(w * 0.030))
-      ctx.fillText(`누적 ${totalPoints}원  ·  오늘 ${todayEarned}/9원`, w / 2, h * 0.508)
+      ctx.fillText(`잔고 ${totalPoints}원  ·  오늘 ${todayEarned}/9원`, w / 2, h * 0.508)
 
       this._btn(w / 2, h * 0.615, w * 0.70, 54, '🎉  오늘 수확 완료!', '#4a2a7a')
       this._btn(w / 2, h * 0.730, w * 0.72, 52, '💸  토스 포인트로 교환하기', '#1a4a7a')
@@ -235,7 +235,7 @@ export class Renderer {
 
     ctx.fillStyle = C.gold
     ctx.font = font(KR, Math.round(w * 0.055))
-    ctx.fillText(`누적 ${totalPoints}원 보유중`, w / 2, h * 0.455)
+    ctx.fillText(`잔고 ${totalPoints}원`, w / 2, h * 0.455)
 
     ctx.fillStyle = '#a0d890'
     ctx.font = font(KR, Math.round(w * 0.030))
