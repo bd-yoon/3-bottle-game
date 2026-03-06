@@ -6,6 +6,7 @@ import { Renderer } from './Renderer.js'
 import { TouchInput } from '../input/TouchInput.js'
 import { showRewardedAd } from '../lib/adsInToss.js'
 import { SoundManager } from '../audio/SoundManager.js'
+import * as pointManager from '../utils/pointManager.js'
 
 const WIN_COUNT = 3
 const BOTTLE_COUNT = 5
@@ -14,8 +15,9 @@ const LEVEL_KEY = '3bottle_level'
 const GAME_STATES = {
   TITLE: 'title',
   PLAYING: 'playing',
-  WIN: 'win',        // 승리 → 레벨업
-  LOSE: 'lose',      // 패배 → 광고 or 리셋
+  WIN: 'win',           // 승리 → 포인트 적립 + 레벨업
+  LOSE: 'lose',         // 패배 → 광고 or 타이틀 복귀
+  DAILY_LIMIT: 'daily_limit',  // 일일 한도 달성 → 플레이 차단
 }
 
 // ── 레벨 영속성 ────────────────────────────────────────────────────────────────
@@ -35,6 +37,8 @@ export class Game {
     this._level = loadLevel()
     this._winner = null
     this._adLoading = false   // 광고 로딩 중 플래그
+    this._lastEarned = 0      // 마지막 승리에서 적립한 포인트
+    this._showWithdrawModal = false  // 출금 모달 표시 플래그
     this._rafId = null
     this._lastTime = 0
 
@@ -150,6 +154,7 @@ export class Game {
         this.touchInput.clear()
         this.sound.stopBGM()
         if (this._state === GAME_STATES.WIN) {
+          this._lastEarned = pointManager.awardWin()
           this.sound.playClear()
         } else {
           this.sound.playGameOver()
@@ -165,17 +170,24 @@ export class Game {
 
     switch (this._state) {
       case GAME_STATES.TITLE:
-        this.renderer.drawTitle(w, h, this._level)
+        this.renderer.drawTitle(w, h, this._level, pointManager.getTotalPoints(), pointManager.getTodayEarned())
         break
       case GAME_STATES.PLAYING:
         this.renderer.drawGame({ players: this.players, bottles: this.bottles, bases: this.bases, level: this._level })
         break
       case GAME_STATES.WIN:
-        this.renderer.drawWin(w, h, this._level)
+        this.renderer.drawWin(w, h, this._level, this._lastEarned, pointManager.getTotalPoints(), pointManager.getTodayEarned(), pointManager.canWithdraw())
         break
       case GAME_STATES.LOSE:
         this.renderer.drawLose(w, h, this._level, this._winner, this._adLoading)
         break
+      case GAME_STATES.DAILY_LIMIT:
+        this.renderer.drawDailyLimit(w, h, pointManager.getTotalPoints(), pointManager.canWithdraw())
+        break
+    }
+
+    if (this._showWithdrawModal) {
+      this.renderer.drawWithdrawModal(w, h, pointManager.getTotalPoints())
     }
   }
 
@@ -252,28 +264,65 @@ export class Game {
     const w = this.canvas.width
     const h = this.canvas.height
 
-    if (this._state === GAME_STATES.TITLE) {
-      if (this.renderer.hitButton(w / 2, h * 0.76, w * 0.55, 52, px, py)) {
+    // 출금 모달 처리 (최우선)
+    if (this._showWithdrawModal) {
+      if (this.renderer.hitButton(w / 2, h * 0.585, w * 0.65, 52, px, py)) {
         this.sound.playClick()
-        this._startGame(this._level)
+        this._showWithdrawModal = false
+        window.alert('출금 기능은 곧 출시될 예정이에요 🙏')
+      }
+      if (this.renderer.hitButton(w / 2, h * 0.678, w * 0.50, 44, px, py)) {
+        this._showWithdrawModal = false
+      }
+      return
+    }
+
+    if (this._state === GAME_STATES.TITLE) {
+      if (this.renderer.hitButton(w / 2, h * 0.765, w * 0.62, 52, px, py)) {
+        this.sound.playClick()
+        if (!pointManager.canEarnToday()) {
+          this._state = GAME_STATES.DAILY_LIMIT
+        } else {
+          this._startGame(this._level)
+        }
       }
     } else if (this._state === GAME_STATES.WIN) {
-      if (this.renderer.hitButton(w / 2, h * 0.74, w * 0.58, 56, px, py)) {
+      // 다음 레벨 시작
+      if (this.renderer.hitButton(w / 2, h * 0.67, w * 0.70, 54, px, py)) {
         this.sound.playClick()
         this._startGame(this._level + 1)
       }
+      // 출금하기 (조건부)
+      if (pointManager.canWithdraw() && this.renderer.hitButton(w / 2, h * 0.775, w * 0.60, 48, px, py)) {
+        this.sound.playClick()
+        this._showWithdrawModal = true
+      }
     } else if (this._state === GAME_STATES.LOSE) {
       // 광고 보고 다시 도전
-      if (this.renderer.hitButton(w / 2, h * 0.68, w * 0.75, 52, px, py)) {
+      if (this.renderer.hitButton(w / 2, h * 0.65, w * 0.80, 52, px, py)) {
         this.sound.playClick()
         this._handleAdRetry()
       }
-      // 처음부터 (레벨 1)
-      if (this.renderer.hitButton(w / 2, h * 0.79, w * 0.55, 44, px, py)) {
+      // 그냥 돌아가기 (레벨 유지)
+      if (this.renderer.hitButton(w / 2, h * 0.765, w * 0.62, 44, px, py)) {
         this.sound.playClick()
-        saveLevel(1)
-        this._level = 1
         this._state = GAME_STATES.TITLE
+      }
+    } else if (this._state === GAME_STATES.DAILY_LIMIT) {
+      if (pointManager.canWithdraw()) {
+        if (this.renderer.hitButton(w / 2, h * 0.625, w * 0.65, 52, px, py)) {
+          this.sound.playClick()
+          this._showWithdrawModal = true
+        }
+        if (this.renderer.hitButton(w / 2, h * 0.730, w * 0.55, 44, px, py)) {
+          this.sound.playClick()
+          this._state = GAME_STATES.TITLE
+        }
+      } else {
+        if (this.renderer.hitButton(w / 2, h * 0.685, w * 0.55, 48, px, py)) {
+          this.sound.playClick()
+          this._state = GAME_STATES.TITLE
+        }
       }
     }
   }
