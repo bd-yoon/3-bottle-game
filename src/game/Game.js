@@ -296,7 +296,7 @@ export class Game {
           if (pointManager.canWithdraw()) {
             this._showWithdrawModal = true
           } else {
-            const needed = 10 - pointManager.getTotalPoints()
+            const needed = pointManager.WITHDRAW_MIN - pointManager.getTotalPoints()
             window.alert(`${needed}원 더 모으면 출금 가능해요! 내일 또 도전하세요 🍎`)
           }
         }

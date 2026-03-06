@@ -195,7 +195,7 @@ export class Renderer {
       ctx.fillStyle = '#fcd34d'
       ctx.fillText('사과 3개 모으면 토스포인트 3원이에요', w / 2, h * 0.592)
     } else {
-      const needed = Math.max(1, 10 - totalPoints)
+      const needed = Math.max(1, 9 - totalPoints)
       ctx.fillStyle = '#50ff80'
       ctx.fillText(`${needed}원만 더 모으면 토스포인트로 출금할 수 있어요`, w / 2, h * 0.592)
     }

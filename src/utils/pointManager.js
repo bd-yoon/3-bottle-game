@@ -6,7 +6,7 @@ const KEYS = {
 
 export const DAILY_MAX = 9
 export const PER_WIN = 3
-export const WITHDRAW_MIN = 10
+export const WITHDRAW_MIN = 9
 
 function getKSTDate() {
   return new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10)
