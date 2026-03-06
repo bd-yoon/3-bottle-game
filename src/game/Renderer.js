@@ -71,10 +71,10 @@ export class Renderer {
     ctx.fillStyle = C.gold
     ctx.font = font(KR, Math.round(w * 0.038))
     ctx.textAlign = 'center'
-    ctx.fillText(`🍎 잔고 ${totalPoints}원`, w / 2, h * 0.375)
+    ctx.fillText(`가진 사과 : ${totalPoints}개`, w / 2, h * 0.375)
     ctx.fillStyle = '#a0d890'
     ctx.font = font(KR, Math.round(w * 0.028))
-    ctx.fillText(`오늘 ${todayEarned}/9원 획득`, w / 2, h * 0.418)
+    ctx.fillText(`오늘 ${todayEarned}개 획득`, w / 2, h * 0.418)
 
     const chars = [
       { type: 'ai1',    label: '팬더',    col: C.pAI1   },
@@ -104,7 +104,7 @@ export class Renderer {
     ctx.fillStyle = '#a0d890'
     ctx.font = font(KR, Math.round(w * 0.027))
     ctx.textAlign = 'center'
-    ctx.fillText('먼저 3개 모으면 승리! 이길 때마다 3원씩 받아요', w / 2, h * 0.692)
+    ctx.fillText('단계를 깰 때마다 사과 3개를 얻어요. 사과 1개는 토스포인트 1원이에요', w / 2, h * 0.692)
 
     this._btn(w / 2, h * 0.765, w * 0.62, 52, '사과 줍기', '#2a6e3a')
   }
@@ -131,7 +131,7 @@ export class Renderer {
       if (lastEarned > 0) {
         ctx.fillStyle = '#50ff80'
         ctx.font = font(KR, Math.round(w * 0.060))
-        ctx.fillText(`+${lastEarned}원 획득!`, w / 2, h * 0.513)
+        ctx.fillText(`사과 +${lastEarned}개 획득!`, w / 2, h * 0.513)
       } else {
         ctx.fillStyle = '#a0d890'
         ctx.font = font(KR, Math.round(w * 0.032))
@@ -139,11 +139,11 @@ export class Renderer {
       }
       ctx.fillStyle = '#fcd34d'
       ctx.font = font(KR, Math.round(w * 0.030))
-      ctx.fillText(`잔고 ${totalPoints}원  ·  오늘 ${todayEarned}/9원`, w / 2, h * 0.571)
+      ctx.fillText(`가진 사과 ${totalPoints}개  ·  오늘 ${todayEarned}개 획득`, w / 2, h * 0.571)
 
       ctx.fillStyle = '#f0c040'
       ctx.font = font(KR, Math.round(w * 0.026))
-      ctx.fillText('💸 오늘 9원 모으면 토스 포인트로 출금 가능!', w / 2, h * 0.625)
+      ctx.fillText('사과 9개를 모으면 토스포인트로 출금 가능!', w / 2, h * 0.625)
 
       this._btn(w / 2, h * 0.710, w * 0.70, 54, `▶  단계 ${level + 1} 시작`, '#1a6a2e')
     } else {
@@ -151,7 +151,7 @@ export class Renderer {
       if (lastEarned > 0) {
         ctx.fillStyle = '#50ff80'
         ctx.font = font(KR, Math.round(w * 0.060))
-        ctx.fillText(`+${lastEarned}원 획득!`, w / 2, h * 0.450)
+        ctx.fillText(`사과 +${lastEarned}개 획득!`, w / 2, h * 0.450)
       } else {
         ctx.fillStyle = '#a0d890'
         ctx.font = font(KR, Math.round(w * 0.032))
@@ -159,7 +159,7 @@ export class Renderer {
       }
       ctx.fillStyle = '#fcd34d'
       ctx.font = font(KR, Math.round(w * 0.030))
-      ctx.fillText(`잔고 ${totalPoints}원  ·  오늘 ${todayEarned}/9원`, w / 2, h * 0.508)
+      ctx.fillText(`가진 사과 ${totalPoints}개  ·  오늘 ${todayEarned}개 획득`, w / 2, h * 0.508)
 
       this._btn(w / 2, h * 0.615, w * 0.70, 54, '🎉  오늘 수확 완료!', '#4a2a7a')
       this._btn(w / 2, h * 0.730, w * 0.72, 52, '💸  토스 포인트로 교환하기', '#1a4a7a')
@@ -197,7 +197,7 @@ export class Renderer {
     } else {
       const needed = Math.max(1, 9 - totalPoints)
       ctx.fillStyle = '#50ff80'
-      ctx.fillText(`${needed}원만 더 모으면 토스포인트로 출금할 수 있어요`, w / 2, h * 0.592)
+      ctx.fillText(`사과 ${needed}개만 더 모으면 토스포인트로 출금할 수 있어요`, w / 2, h * 0.592)
     }
 
     if (adLoading) {
@@ -231,11 +231,11 @@ export class Renderer {
 
     ctx.fillStyle = C.green
     ctx.font = font(KR, Math.round(w * 0.040))
-    ctx.fillText('하루 최대 9원을 모았어요 🍎', w / 2, h * 0.365)
+    ctx.fillText('오늘 사과 9개를 모았어요 🍎', w / 2, h * 0.365)
 
     ctx.fillStyle = C.gold
     ctx.font = font(KR, Math.round(w * 0.055))
-    ctx.fillText(`잔고 ${totalPoints}원`, w / 2, h * 0.455)
+    ctx.fillText(`가진 사과 ${totalPoints}개`, w / 2, h * 0.455)
 
     ctx.fillStyle = '#a0d890'
     ctx.font = font(KR, Math.round(w * 0.030))
@@ -245,10 +245,10 @@ export class Renderer {
       this._btn(w / 2, h * 0.625, w * 0.65, 52, '💸  출금하기', '#1a4a7a')
       this._btn(w / 2, h * 0.730, w * 0.55, 44, '확인', '#2a4030')
     } else {
-      const needed = 10 - totalPoints
+      const needed = 9 - totalPoints
       ctx.fillStyle = '#80b8a0'
       ctx.font = font(KR, Math.round(w * 0.028))
-      ctx.fillText(`출금까지 ${needed}원 더 필요해요`, w / 2, h * 0.588)
+      ctx.fillText(`사과 ${needed}개 더 모으면 출금할 수 있어요`, w / 2, h * 0.588)
       this._btn(w / 2, h * 0.685, w * 0.55, 48, '확인', '#2a4030')
     }
   }
