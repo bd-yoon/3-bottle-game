@@ -10,22 +10,13 @@ import * as pointManager from '../utils/pointManager.js'
 
 const WIN_COUNT = 3
 const BOTTLE_COUNT = 5
-const LEVEL_KEY = '3bottle_level'
 
 const GAME_STATES = {
   TITLE: 'title',
   PLAYING: 'playing',
-  WIN: 'win',           // 승리 → 포인트 적립 + 레벨업
+  WIN: 'win',           // 승리 → 포인트 적립 + 다음 단계
   LOSE: 'lose',         // 패배 → 광고 or 타이틀 복귀
   DAILY_LIMIT: 'daily_limit',  // 일일 한도 달성 → 플레이 차단
-}
-
-// ── 레벨 영속성 ────────────────────────────────────────────────────────────────
-function loadLevel() {
-  return parseInt(localStorage.getItem(LEVEL_KEY) || '1', 10)
-}
-function saveLevel(level) {
-  localStorage.setItem(LEVEL_KEY, String(level))
 }
 
 export class Game {
@@ -34,7 +25,7 @@ export class Game {
     this.renderer = new Renderer(canvas)
     this.touchInput = new TouchInput()
     this._state = GAME_STATES.TITLE
-    this._level = loadLevel()
+    this._level = pointManager.getTodayStage()
     this._winner = null
     this._adLoading = false   // 광고 로딩 중 플래그
     this._lastEarned = 0      // 마지막 승리에서 적립한 포인트
@@ -56,7 +47,6 @@ export class Game {
 
   _startGame(level) {
     this._level = level
-    saveLevel(level)
 
     const w = this.canvas.width
     const h = this.canvas.height
@@ -176,7 +166,7 @@ export class Game {
         this.renderer.drawGame({ players: this.players, bottles: this.bottles, bases: this.bases, level: this._level })
         break
       case GAME_STATES.WIN:
-        this.renderer.drawWin(w, h, this._level, this._lastEarned, pointManager.getTotalPoints(), pointManager.getTodayEarned(), pointManager.canWithdraw())
+        this.renderer.drawWin(w, h, this._level, this._lastEarned, pointManager.getTotalPoints(), pointManager.getTodayEarned(), pointManager.canWithdraw(), !pointManager.canEarnToday())
         break
       case GAME_STATES.LOSE:
         this.renderer.drawLose(w, h, this._level, this._winner, this._adLoading)
@@ -287,10 +277,14 @@ export class Game {
         }
       }
     } else if (this._state === GAME_STATES.WIN) {
-      // 다음 레벨 시작
+      // 다음 단계 시작 (단계 3 완료 또는 일일 한도 달성 시 DAILY_LIMIT으로)
       if (this.renderer.hitButton(w / 2, h * 0.67, w * 0.70, 54, px, py)) {
         this.sound.playClick()
-        this._startGame(this._level + 1)
+        if (this._level >= 3 || !pointManager.canEarnToday()) {
+          this._state = GAME_STATES.DAILY_LIMIT
+        } else {
+          this._startGame(this._level + 1)
+        }
       }
       // 출금하기 (조건부)
       if (pointManager.canWithdraw() && this.renderer.hitButton(w / 2, h * 0.775, w * 0.60, 48, px, py)) {

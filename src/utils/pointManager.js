@@ -45,3 +45,7 @@ export function awardWin() {
 export function canWithdraw() {
   return getTotalPoints() >= WITHDRAW_MIN
 }
+
+export function getTodayStage() {
+  return Math.min(Math.floor(getTodayEarned() / PER_WIN) + 1, 3)
+}

@@ -99,17 +99,17 @@ export class Renderer {
     ctx.fillStyle = '#c8f0a8'
     ctx.font = font(KR, Math.round(w * 0.025))
     ctx.textAlign = 'center'
-    ctx.fillText('🕹 조이스틱으로 이동 · 사과를 집어 내 진영으로!', w / 2, h * 0.645)
+    ctx.fillText('카피바라를 이동해 사과를 집어 내 진영으로!', w / 2, h * 0.645)
 
     ctx.fillStyle = '#a0d890'
     ctx.font = font(KR, Math.round(w * 0.027))
     ctx.textAlign = 'center'
-    ctx.fillText('🍎 먼저 3개 모으면 승리!  ·  이기면 +3원!', w / 2, h * 0.692)
+    ctx.fillText('먼저 3개 모으면 승리! 이길 때마다 3원씩 받아요', w / 2, h * 0.692)
 
-    this._btn(w / 2, h * 0.765, w * 0.62, 52, '▶  게임 시작', '#2a6e3a')
+    this._btn(w / 2, h * 0.765, w * 0.62, 52, '사과 줍기', '#2a6e3a')
   }
 
-  drawWin(w, h, level, lastEarned, totalPoints, todayEarned, canWithdrawFlag) {
+  drawWin(w, h, level, lastEarned, totalPoints, todayEarned, canWithdrawFlag, isFinalStage) {
     const { ctx } = this
     this._drawBg(w, h)
     ctx.fillStyle = 'rgba(0,10,0,0.55)'
@@ -122,25 +122,30 @@ export class Renderer {
     ctx.fillText('클리어!', w / 2, h * 0.255)
     ctx.fillStyle = C.green
     ctx.font = font(KR, Math.round(w * 0.042))
-    ctx.fillText(`레벨 ${level} 완료!`, w / 2, h * 0.350)
+    ctx.fillText(`단계 ${level} 완료!`, w / 2, h * 0.350)
 
-    this._levelBadge(w / 2, h * 0.425, level + 1, true)
+    if (!isFinalStage) {
+      this._levelBadge(w / 2, h * 0.425, level + 1, true)
+    }
 
     // 포인트 적립 표시
+    const pointY = isFinalStage ? h * 0.465 : h * 0.513
     if (lastEarned > 0) {
       ctx.fillStyle = '#50ff80'
       ctx.font = font(KR, Math.round(w * 0.060))
-      ctx.fillText(`+${lastEarned}원 획득!`, w / 2, h * 0.513)
+      ctx.fillText(`+${lastEarned}원 획득!`, w / 2, pointY)
     } else {
       ctx.fillStyle = '#a0d890'
       ctx.font = font(KR, Math.round(w * 0.032))
-      ctx.fillText('오늘 한도 달성 — 내일 또 도전!', w / 2, h * 0.513)
+      ctx.fillText('오늘 한도 달성 — 내일 또 도전!', w / 2, pointY)
     }
     ctx.fillStyle = '#fcd34d'
     ctx.font = font(KR, Math.round(w * 0.030))
-    ctx.fillText(`누적 ${totalPoints}원  ·  오늘 ${todayEarned}/9원`, w / 2, h * 0.568)
+    ctx.fillText(`누적 ${totalPoints}원  ·  오늘 ${todayEarned}/9원`, w / 2, pointY + h * 0.058)
 
-    this._btn(w / 2, h * 0.67, w * 0.70, 54, `▶  레벨 ${level + 1} 시작`, '#1a6a2e')
+    this._btn(w / 2, h * 0.67, w * 0.70, 54,
+      isFinalStage ? '🎉  오늘 수확 완료!' : `▶  단계 ${level + 1} 시작`,
+      isFinalStage ? '#4a2a7a' : '#1a6a2e')
 
     if (canWithdrawFlag) {
       this._btn(w / 2, h * 0.775, w * 0.60, 48, '💸  출금하기', '#1a4a7a')
@@ -727,8 +732,8 @@ export class Renderer {
     }
     ctx.textAlign = 'right'
     ctx.fillStyle = C.gold
-    ctx.font = font(MN, 12)
-    ctx.fillText(`LV.${state.level}`, w - 10, 25)
+    ctx.font = font(KR, 12)
+    ctx.fillText(`단계 ${state.level}`, w - 10, 25)
   }
 
   // ── UI helpers ────────────────────────────────────────────────────────────
@@ -750,7 +755,7 @@ export class Renderer {
     ctx.textAlign = 'center'
     ctx.fillStyle = C.white
     ctx.font = font(KR, 14)
-    ctx.fillText(isNext ? `다음: LV.${level}` : `LV.${level}`, cx, cy + 6)
+    ctx.fillText(isNext ? `다음: 단계 ${level}` : `단계 ${level}`, cx, cy + 6)
   }
 
   _panel(x, y, w, h) {
