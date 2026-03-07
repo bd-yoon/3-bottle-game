@@ -39,6 +39,8 @@ export class Game {
     this._winParticles = []
     this._winCountupTarget = 0
     this._winCountupStart = 0
+    // final effect: 사과 9개 달성(DAILY_LIMIT) 진입 시 폭발 이펙트
+    this._finalParticles = []
     // P2-B: HUD apple slot pop animation
     this._hudPopTimer = 0
     // P3: tutorial mode for first-time visitors
@@ -108,6 +110,7 @@ export class Game {
     this._particles = []
     this._winParticles = []
     this._winCountupTarget = 0
+    this._finalParticles = []
     this._hudPopTimer = 0
     this.touchInput.clear()
     this._state = GAME_STATES.PLAYING
@@ -142,6 +145,14 @@ export class Game {
       p.life -= 0.016
     }
     this._winParticles = this._winParticles.filter(p => p.life > 0)
+
+    // final effect: 사과 9개 달성 폭발 파티클 물리
+    for (const p of this._finalParticles) {
+      p.x += p.vx; p.y += p.vy
+      p.vy += 0.10
+      p.life -= 0.013
+    }
+    this._finalParticles = this._finalParticles.filter(p => p.life > 0)
 
     // P2-B: HUD pop timer decay
     if (this._hudPopTimer > 0) this._hudPopTimer = Math.max(0, this._hudPopTimer - dt)
@@ -243,14 +254,33 @@ export class Game {
     return Math.round(eased * this._winCountupTarget)
   }
 
-  // P2-A: KST midnight countdown string HH:MM:SS
+  // 사과 9개 달성 폭발 이펙트 초기화
+  _initFinalEffect() {
+    const cx = this.canvas.width / 2
+    const cy = this.canvas.height * 0.35
+    const colors = ['#ff4444', '#ff8844', '#fcd34d', '#ffffff', '#50ff80', '#a0e8ff', '#ff66aa']
+    for (let i = 0; i < 60; i++) {
+      const angle = (Math.PI * 2 * i) / 60 + (Math.random() - 0.5) * 0.5
+      const speed = 4 + Math.random() * 10
+      this._finalParticles.push({
+        x: cx, y: cy,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 2,
+        r: 5 + Math.floor(Math.random() * 5),
+        color: colors[Math.floor(Math.random() * colors.length)],
+        life: 1,
+      })
+    }
+  }
+
+  // P2-A: KST 자정까지 남은 시간 — "X시간 Y분" 또는 "Y분" 자연어 형식
   _getCountdownStr() {
     const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000)
     const totalSec = (24 * 3600) - (kstNow.getUTCHours() * 3600 + kstNow.getUTCMinutes() * 60 + kstNow.getUTCSeconds())
     const h = Math.floor(totalSec / 3600)
-    const m = Math.floor((totalSec % 3600) / 60)
-    const s = totalSec % 60
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+    const m = Math.min(60, Math.floor((totalSec % 3600) / 60) + 1)  // 올림, 최대 60
+    if (h > 0) return `${h}시간 ${m}분`
+    return `${m}분`
   }
 
   _render() {
@@ -295,6 +325,7 @@ export class Game {
           this._getCountdownStr(),           // P2-A
           pointManager.getTodayEarned(),
         )
+        if (this._finalParticles.length) this.renderer.drawParticles(this._finalParticles)
         break
     }
 
@@ -384,7 +415,7 @@ export class Game {
     }
 
     if (this._state === GAME_STATES.TITLE) {
-      if (this.renderer.hitButton(w / 2, h * 0.765, w * 0.62, 52, px, py)) {
+      if (this.renderer.hitButton(w / 2, h * 0.790, w * 0.62, 52, px, py)) {
         this.sound.playClick()
         if (!pointManager.canEarnToday() && !this._isTutorial) {
           this._state = GAME_STATES.DAILY_LIMIT
@@ -413,6 +444,7 @@ export class Game {
         if (this.renderer.hitButton(w / 2, h * 0.615, w * 0.70, 54, px, py)) {
           this.sound.playClick()
           this._state = GAME_STATES.DAILY_LIMIT
+          this._initFinalEffect()  // 사과 9개 달성 폭발 이펙트
         }
         if (this.renderer.hitButton(w / 2, h * 0.730, w * 0.72, 52, px, py)) {
           this.sound.playClick()

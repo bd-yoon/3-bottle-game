@@ -17,6 +17,7 @@ function resetDailyIfNeeded() {
   if (localStorage.getItem(KEYS.TODAY_DATE) !== today) {
     localStorage.setItem(KEYS.TODAY_DATE, today)
     localStorage.setItem(KEYS.TODAY_EARNED, '0')
+    localStorage.setItem(KEYS.POINTS, '0')  // 당일 미출금 사과는 자정에 소멸
   }
 }
 
@@ -43,7 +44,7 @@ export function awardWin() {
 }
 
 export function canWithdraw() {
-  return getTotalPoints() >= WITHDRAW_MIN
+  return getTodayEarned() >= DAILY_MAX  // 당일 9개 달성해야만 출금 가능
 }
 
 // 실제 출금 API 연동 시 호출 — 현재는 미사용 (mock 출금)

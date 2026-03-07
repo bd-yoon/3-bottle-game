@@ -2,7 +2,7 @@
 
 > **이 문서의 목적**: "사과는 다 내꺼!" 개발 전 과정을 기록.
 > 앱인토스 패키징 및 다음 프로젝트 시 이 파일을 Claude에게 전달하면 컨텍스트 없이 바로 작업 재개 가능.
-> 앱인토스 플랫폼 공통 사항은 `소원성취 향초 켜기/DEVLOG.md`를 함께 참조.
+> 앱인토스 플랫폼 공통 사항은 `sowon-candle/DEVLOG.md`를 함께 참조.
 
 ---
 
@@ -29,7 +29,7 @@
 | **앱인토스 appName** | 미정 (콘솔에서 앱 생성 후 결정) |
 | **GitHub** | `bd-yoon/3-bottle-game` |
 | **Vercel** | 자동배포 연결됨 (URL은 Vercel 대시보드 확인) |
-| **로컬 경로** | `~/Desktop/바이브코딩/3 bottle game/` |
+| **로컬 경로** | `~/Desktop/vibe-coding/three-bottle-game/` |
 | **앱 타입** | 앱인토스 게임 (`appType: 'game'`) |
 
 ### 게임 한 줄 요약
@@ -50,7 +50,7 @@
 
 ### 파일 구조
 ```
-3 bottle game/
+three-bottle-game/
 ├── index.html                  # 캔버스 + 진입점
 ├── src/
 │   ├── main.js                 # Game 인스턴스 생성 & start()
@@ -588,4 +588,75 @@ Vercel URL 업데이트
 | https://github.com/bd-yoon/3-bottle-game | 소스코드 |
 | https://console-apps-in-toss.toss.im/ | 앱인토스 콘솔 |
 | https://developers-apps-in-toss.toss.im/ | 앱인토스 개발자 문서 |
-| `소원성취 향초 켜기/DEVLOG.md` | 앱인토스 공통 설정 (계정, TDS, granite, 광고) |
+| `sowon-candle/DEVLOG.md` | 앱인토스 공통 설정 (계정, TDS, granite, 광고) |
+
+---
+
+## 디자인 개선 결정사항 (2026-03-07)
+
+> `DESIGN.md` 신규 작성 완료. 아래는 핵심 결정 이유 기록.
+
+### 개선 방향 원칙
+- 패배 시 광고 구조 변경 없음 (수익화 유지)
+- 성취감 이펙트 강화 (사과 수집/WIN 화면) + 재방문 유도 (일일 한도 화면) 집중
+
+### P1-A: 사과 수집 시 픽셀 아트 파티클
+- **결정**: 캔버스 파티클 시스템 추가, 사과 빨강 계열 색상, 베이스 전달 시 트리거
+- **이유**: 사과를 수집해도 시각/청각 피드백이 없어 성취감 낮음
+- **구현 키포인트**: 게임 루프에 `particles[]` 배열 추가, 기존 `playScore()` 와 동기화
+
+### P1-B: WIN 화면 포인트 카운트업 + 별 파티클
+- **결정**: ease-out cubic 카운트업 800ms + 방사형 픽셀 파티클 20개
+- **이유**: 현재 WIN 화면은 정적 텍스트만 — 포인트 획득의 중요성이 시각적으로 전달 안 됨
+- **구현 키포인트**: `requestAnimationFrame` 기반 카운트업, `spawnWinParticles()` 함수 추가
+
+### P2-A: 일일 한도 달성 화면 카운트다운
+- **결정**: KST 자정까지 남은 시간 HH:MM:SS + 오늘 기록 요약
+- **이유**: 9포인트 달성 후 빈 화면은 재방문 동기 없음 → 내일 다시 오는 이유 제공
+- **구현 키포인트**: `Date.now() + 9*60*60*1000` KST 오프셋, `setInterval` 1초 업데이트
+
+### P2-B: HUD 사과 진행도 표시
+- **결정**: 상단 좌측에 사과 아이콘 슬롯 3개 (수집 수량만큼 채움)
+- **이유**: 현재 "3개를 모아라!" 텍스트만 — 지금 몇 개 가졌는지 게임 중 확인 불가
+
+### P3: 튜토리얼 레벨 (레벨 0)
+- **결정**: 첫 방문 시 자동 실행, AI 없음, 포인트 미지급, `localStorage` 완료 기록
+- **이유**: 레벨 1 첫 시작 시 규칙 이해 전 AI에게 패배하는 경우 이탈 리스크
+
+---
+
+## 11. UX/UI 개선 구현 완료 (2026-03-07)
+
+**커밋**: `10712d5` — "UX/UI 개선: 파티클 이펙트, 카운트업, 카운트다운, HUD 슬롯, 튜토리얼"
+
+**수정 파일**
+- `src/game/Game.js` — 파티클 시스템, WIN 이펙트, 카운트다운 로직, HUD pop 타이머, 튜토리얼 플래그
+- `src/game/Renderer.js` — `drawParticles()` 메서드, WIN 카운트업 파라미터, DAILY_LIMIT 카운트다운 표시, HUD 슬롯 UI, 튜토리얼 힌트 텍스트
+
+### P1-A 구현: 사과 수집 파티클 이펙트
+- `Game.js`: `this._particles = []` 배열 + `_emitAppleParticles(base)` 메서드
+- 트리거: 플레이어가 베이스에 사과 전달 시 8~12개 파티클 방사
+- 색상: `['#ff4444','#ff8888','#ffcc00','#ffffff']`
+- `Renderer.js`: `drawParticles(particles)` 메서드 — Canvas 픽셀 사각형 렌더링
+
+### P1-B 구현: WIN 화면 포인트 카운트업 + 별 파티클
+- `Game.js`: `_winParticles[]`, `_winCountupTarget`, `_winCountupStart` 상태 추가
+- `_initWinEffect(earned)`: 20개 방사형 황금 파티클 생성
+- `_getWinDisplay()`: ease-out cubic 보간 (800ms) 카운트업 값 계산
+- `Renderer.js`: `drawWin()` 함수에 `displayEarned` 파라미터 추가해 카운트업 숫자 렌더링
+
+### P2-A 구현: 일일 한도 KST 카운트다운
+- `Game.js`: `_getCountdownStr()` — `Date.now() + 9*60*60*1000` KST 오프셋 기준 자정까지 HH:MM:SS 계산
+- `Renderer.js`: `drawDailyLimit()` 함수에 `countdownStr`, `todayEarned` 파라미터 추가
+
+### P2-B 구현: HUD 사과 슬롯 UI
+- `Renderer.js`: `_drawHUD()` — 텍스트 대신 14px 픽셀 사각형 슬롯 3개로 교체
+- 수집 슬롯: 빨간 채움 + `_hudPopTimer` 기반 pop 플래시 효과
+- 미수집 슬롯: 어두운 테두리 사각형
+
+### P3 구현: 튜토리얼 레벨
+- `Game.js`: `this._isTutorial = !localStorage.getItem('3bottle_tutorial_done')` — 영구 1회 플래그
+- 튜토리얼 조건: `_update()` 내 AI 이동 스킵, 포인트 미지급
+- WIN 처리: `_tutorialJustWon = true` 설정 → "연습 완료!" 전용 화면 표시
+- 완료: `localStorage.setItem('3bottle_tutorial_done', '1')` 저장 → 이후 레벨 1부터 시작
+- `Renderer.js`: 튜토리얼 WIN 화면 분기 + TITLE 화면 힌트 텍스트 표시

@@ -114,7 +114,16 @@ export class Renderer {
       ctx.fillText('처음이세요? 연습 단계로 시작해봐요!', w / 2, h * 0.720)
     }
 
-    this._btn(w / 2, h * 0.765, w * 0.62, 52, '사과 줍기', '#2a6e3a')
+    // 사과 소멸 안내 (위트 있는 문구)
+    ctx.fillStyle = '#e8d870'
+    ctx.font = font(KR, Math.round(w * 0.024))
+    ctx.textAlign = 'center'
+    ctx.fillText('사과 유효기간: 오늘까지!', w / 2, h * 0.732)
+    ctx.fillStyle = '#b0a850'
+    ctx.font = font(KR, Math.round(w * 0.021))
+    ctx.fillText('자정이 지나면 사과가 썩어서 소멸돼요', w / 2, h * 0.756)
+
+    this._btn(w / 2, h * 0.790, w * 0.62, 52, '사과 줍기', '#2a6e3a')
   }
 
   drawWin(w, h, level, displayEarned, totalPoints, todayEarned, canWithdrawFlag, isFinalStage, tutorialJustWon = false) {
@@ -263,14 +272,14 @@ export class Renderer {
     ctx.font = font(KR, Math.round(w * 0.052))
     ctx.fillText(`가진 사과 ${totalPoints}개`, w / 2, h * 0.415)
 
-    // P2-A: KST midnight countdown
+    // P2-A: KST midnight countdown — 자연어 메시지
     if (countdownStr) {
-      ctx.fillStyle = '#a0d890'
-      ctx.font = font(KR, Math.round(w * 0.027))
-      ctx.fillText('다음 도전까지', w / 2, h * 0.480)
       ctx.fillStyle = '#70ffb0'
-      ctx.font = font(MN, Math.round(w * 0.062))
-      ctx.fillText(countdownStr, w / 2, h * 0.548)
+      ctx.font = font(KR, Math.round(w * 0.036))
+      ctx.fillText(`${countdownStr} 뒤에`, w / 2, h * 0.490)
+      ctx.fillStyle = '#50e890'
+      ctx.font = font(KR, Math.round(w * 0.030))
+      ctx.fillText('사과 줍기 다시 할 수 있어요', w / 2, h * 0.535)
     }
 
     if (canWithdrawFlag) {
