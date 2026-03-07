@@ -7,6 +7,8 @@ import { TouchInput } from '../input/TouchInput.js'
 import { showRewardedAd } from '../lib/adsInToss.js'
 import { SoundManager } from '../audio/SoundManager.js'
 import * as pointManager from '../utils/pointManager.js'
+import { getUserId } from '../utils/userId.js'
+import { requestExchange } from '../utils/exchangeApi.js'
 
 const WIN_COUNT = 3
 const BOTTLE_COUNT = 5
@@ -30,6 +32,8 @@ export class Game {
     this._adLoading = false
     this._lastEarned = 0
     this._showWithdrawModal = false
+    this._exchangeState = null    // null | 'loading' | 'success' | 'error'
+    this._exchangeMessage = ''
     this._rafId = null
     this._lastTime = 0
 
@@ -330,7 +334,7 @@ export class Game {
     }
 
     if (this._showWithdrawModal) {
-      this.renderer.drawWithdrawModal(w, h, pointManager.getTotalPoints())
+      this.renderer.drawWithdrawModal(w, h, pointManager.getTotalPoints(), this._exchangeState, this._exchangeMessage)
     }
   }
 
@@ -403,13 +407,37 @@ export class Game {
     const h = this.canvas.height
 
     if (this._showWithdrawModal) {
+      if (this._exchangeState === 'loading') return
+
+      if (this._exchangeState === 'success' || this._exchangeState === 'error') {
+        if (this.renderer.hitButton(w / 2, h * 0.585, w * 0.65, 52, px, py)) {
+          this.sound.playClick()
+          this._showWithdrawModal = false
+          this._exchangeState = null
+        }
+        return
+      }
+
       if (this.renderer.hitButton(w / 2, h * 0.585, w * 0.65, 52, px, py)) {
         this.sound.playClick()
-        this._showWithdrawModal = false
-        window.alert('출금 기능은 곧 출시될 예정이에요 🙏')
+        this._exchangeState = 'loading'
+        const userId = getUserId()
+        const amount = pointManager.getTotalPoints()
+        requestExchange(userId, amount).then(result => {
+          if (result.success) {
+            pointManager.subtractPoints(amount)
+            pointManager.markExchanged()
+            this._exchangeState = 'success'
+            this._exchangeMessage = result.message
+          } else {
+            this._exchangeState = 'error'
+            this._exchangeMessage = result.message
+          }
+        })
       }
       if (this.renderer.hitButton(w / 2, h * 0.678, w * 0.50, 44, px, py)) {
         this._showWithdrawModal = false
+        this._exchangeState = null
       }
       return
     }
@@ -417,6 +445,7 @@ export class Game {
     if (this._state === GAME_STATES.TITLE) {
       if (this.renderer.hitButton(w / 2, h * 0.800, w * 0.62, 52, px, py)) {
         this.sound.playClick()
+        this._level = pointManager.getTodayStage()  // 자정 리셋 대응
         if (!pointManager.canEarnToday() && !this._isTutorial) {
           this._state = GAME_STATES.DAILY_LIMIT
         } else {
@@ -457,13 +486,9 @@ export class Game {
         }
       }
     } else if (this._state === GAME_STATES.LOSE) {
-      if (this.renderer.hitButton(w / 2, h * 0.660, w * 0.80, 52, px, py)) {
+      if (this.renderer.hitButton(w / 2, h * 0.710, w * 0.80, 52, px, py)) {
         this.sound.playClick()
         this._handleAdRetry()
-      }
-      if (this.renderer.hitButton(w / 2, h * 0.775, w * 0.62, 44, px, py)) {
-        this.sound.playClick()
-        this._state = GAME_STATES.TITLE
       }
     } else if (this._state === GAME_STATES.DAILY_LIMIT) {
       if (pointManager.canWithdraw()) {
@@ -473,11 +498,13 @@ export class Game {
         }
         if (this.renderer.hitButton(w / 2, h * 0.730, w * 0.55, 44, px, py)) {
           this.sound.playClick()
+          this._level = pointManager.getTodayStage()
           this._state = GAME_STATES.TITLE
         }
       } else {
         if (this.renderer.hitButton(w / 2, h * 0.685, w * 0.55, 48, px, py)) {
           this.sound.playClick()
+          this._level = pointManager.getTodayStage()
           this._state = GAME_STATES.TITLE
         }
       }

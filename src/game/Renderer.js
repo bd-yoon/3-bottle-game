@@ -235,11 +235,10 @@ export class Renderer {
     ctx.fillText('모은 사과는 내일이 되면 사라져요', w / 2, h * 0.618)
 
     if (adLoading) {
-      this._btn(w / 2, h * 0.660, w * 0.80, 52, '로딩 중...', '#555')
+      this._btn(w / 2, h * 0.710, w * 0.80, 52, '로딩 중...', '#555')
     } else {
-      this._btn(w / 2, h * 0.660, w * 0.80, 52, '▶  광고 보고 다시 도전', '#a04810')
+      this._btn(w / 2, h * 0.710, w * 0.80, 52, '▶  광고 보고 다시 도전', '#a04810')
     }
-    this._btn(w / 2, h * 0.775, w * 0.62, 44, '돌아가기  (레벨 유지)', '#3a3a60')
 
     if (adLoading) {
       ctx.fillStyle = 'rgba(0,0,0,0.45)'
@@ -311,13 +310,52 @@ export class Renderer {
     }
   }
 
-  drawWithdrawModal(w, h, totalPoints) {
+  drawWithdrawModal(w, h, totalPoints, exchangeState, exchangeMessage) {
     const { ctx } = this
     ctx.fillStyle = 'rgba(0,0,0,0.75)'
     ctx.fillRect(0, 0, w, h)
     this._panel(w * 0.08, h * 0.22, w * 0.84, h * 0.56)
-
     ctx.textAlign = 'center'
+
+    if (exchangeState === 'loading') {
+      ctx.fillStyle = C.gold
+      ctx.font = font(KR, Math.round(w * 0.058))
+      ctx.fillText('출금 처리 중', w / 2, h * 0.42)
+      const alpha = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(Date.now() / 300))
+      ctx.globalAlpha = alpha
+      ctx.fillStyle = '#a0d890'
+      ctx.font = font(KR, Math.round(w * 0.032))
+      ctx.fillText('잠시만 기다려주세요...', w / 2, h * 0.50)
+      ctx.globalAlpha = 1
+      return
+    }
+
+    if (exchangeState === 'success') {
+      ctx.fillStyle = '#4ade80'
+      ctx.font = font(KR, Math.round(w * 0.10))
+      ctx.fillText('✓', w / 2, h * 0.40)
+      ctx.fillStyle = C.gold
+      ctx.font = font(KR, Math.round(w * 0.048))
+      ctx.fillText(exchangeMessage, w / 2, h * 0.48)
+      ctx.fillStyle = '#a0d890'
+      ctx.font = font(KR, Math.round(w * 0.026))
+      ctx.fillText('토스 포인트로 적립됩니다', w / 2, h * 0.53)
+      this._btn(w / 2, h * 0.585, w * 0.65, 52, '확인', '#1a4a7a')
+      return
+    }
+
+    if (exchangeState === 'error') {
+      ctx.fillStyle = '#f87171'
+      ctx.font = font(KR, Math.round(w * 0.10))
+      ctx.fillText('✕', w / 2, h * 0.40)
+      ctx.fillStyle = C.gold
+      ctx.font = font(KR, Math.round(w * 0.038))
+      ctx.fillText(exchangeMessage, w / 2, h * 0.48)
+      this._btn(w / 2, h * 0.585, w * 0.65, 52, '확인', '#1a4a7a')
+      return
+    }
+
+    // Default: 기존 출금 확인 UI
     ctx.fillStyle = C.gold
     ctx.font = font(KR, Math.round(w * 0.058))
     ctx.fillText('토스 포인트 출금', w / 2, h * 0.318)

@@ -2,6 +2,7 @@ const KEYS = {
   POINTS: '3bottle_points',
   TODAY_DATE: '3bottle_today_date',
   TODAY_EARNED: '3bottle_today_earned',
+  EXCHANGED_TODAY: '3bottle_exchanged_today',
 }
 
 export const DAILY_MAX = 9
@@ -18,6 +19,7 @@ function resetDailyIfNeeded() {
     localStorage.setItem(KEYS.TODAY_DATE, today)
     localStorage.setItem(KEYS.TODAY_EARNED, '0')
     localStorage.setItem(KEYS.POINTS, '0')  // 당일 미출금 사과는 자정에 소멸
+    localStorage.removeItem(KEYS.EXCHANGED_TODAY)
   }
 }
 
@@ -44,7 +46,15 @@ export function awardWin() {
 }
 
 export function canWithdraw() {
-  return getTodayEarned() >= DAILY_MAX  // 당일 9개 달성해야만 출금 가능
+  return getTodayEarned() >= DAILY_MAX && !hasExchangedToday()
+}
+
+export function hasExchangedToday() {
+  return localStorage.getItem(KEYS.EXCHANGED_TODAY) === getKSTDate()
+}
+
+export function markExchanged() {
+  localStorage.setItem(KEYS.EXCHANGED_TODAY, getKSTDate())
 }
 
 // 실제 출금 API 연동 시 호출 — 현재는 미사용 (mock 출금)
