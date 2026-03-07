@@ -229,7 +229,7 @@ export class Renderer {
     // 사과 소멸 안내 — 실패 화면에서만 표시
     ctx.fillStyle = '#d4c860'
     ctx.font = font(KR, Math.round(w * 0.021))
-    ctx.fillText('자정이 지나면 사과가 썩어서 소멸돼요', w / 2, h * 0.618)
+    ctx.fillText('모은 사과는 내일이 되면 사라져요', w / 2, h * 0.618)
 
     if (adLoading) {
       this._btn(w / 2, h * 0.660, w * 0.80, 52, '로딩 중...', '#555')

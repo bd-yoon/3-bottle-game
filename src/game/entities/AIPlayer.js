@@ -20,8 +20,8 @@ export function getDifficultyParams(level) {
   if (l === 1) return { speedMult: 1.0, thinkInterval: 0.40, stealWeight: 0.01, playerHarassWeight: 0.01 }
   // L2: L1보다 아주 살짝 빠르고 공격적 — thinkInterval 0.35s, steal/harass 소폭 상승
   if (l === 2) return { speedMult: 1.0, thinkInterval: 0.35, stealWeight: 0.02, playerHarassWeight: 0.03 }
-  // L3: 유지
-  if (l === 3) return { speedMult: 1.0, thinkInterval: 0.20, stealWeight: 0.12, playerHarassWeight: 0.20 }
+  // L3: steal/harass 소폭 하향 조정
+  if (l === 3) return { speedMult: 1.0, thinkInterval: 0.20, stealWeight: 0.10, playerHarassWeight: 0.15 }
 
   // ── 온보딩 구간 L4~6 (l>3 경우) ──────────────────────────────────────────
   if (l <= 6) {
