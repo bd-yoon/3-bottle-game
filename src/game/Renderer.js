@@ -55,7 +55,7 @@ export class Renderer {
     this._drawHUD(state, w, h)
   }
 
-  drawTitle(w, h, level, totalPoints, todayEarned) {
+  drawTitle(w, h, level, totalPoints, todayEarned, isTutorial = false) {
     const { ctx } = this
     this._drawBg(w, h)
     this._panel(w * 0.06, h * 0.10, w * 0.88, h * 0.65)
@@ -106,10 +106,18 @@ export class Renderer {
     ctx.textAlign = 'center'
     ctx.fillText('단계를 깰 때마다 사과 3개를 얻어요. 사과 1개는 토스포인트 1원이에요', w / 2, h * 0.692)
 
+    // P3: tutorial hint
+    if (isTutorial) {
+      ctx.fillStyle = '#50e890'
+      ctx.font = font(KR, Math.round(w * 0.026))
+      ctx.textAlign = 'center'
+      ctx.fillText('처음이세요? 연습 단계로 시작해봐요!', w / 2, h * 0.720)
+    }
+
     this._btn(w / 2, h * 0.765, w * 0.62, 52, '사과 줍기', '#2a6e3a')
   }
 
-  drawWin(w, h, level, lastEarned, totalPoints, todayEarned, canWithdrawFlag, isFinalStage) {
+  drawWin(w, h, level, displayEarned, totalPoints, todayEarned, canWithdrawFlag, isFinalStage, tutorialJustWon = false) {
     const { ctx } = this
     this._drawBg(w, h)
     ctx.fillStyle = 'rgba(0,10,0,0.55)'
@@ -117,6 +125,25 @@ export class Renderer {
     this._panel(w * 0.06, h * 0.12, w * 0.88, h * 0.72)
 
     ctx.textAlign = 'center'
+
+    // P3: tutorial complete screen
+    if (tutorialJustWon) {
+      ctx.fillStyle = C.green
+      ctx.font = font(KR, Math.round(w * 0.10))
+      ctx.fillText('연습 완료!', w / 2, h * 0.255)
+      ctx.fillStyle = '#a0d890'
+      ctx.font = font(KR, Math.round(w * 0.038))
+      ctx.fillText('사과 모으기를 마스터했어요!', w / 2, h * 0.350)
+      ctx.fillStyle = '#80c8a0'
+      ctx.font = font(KR, Math.round(w * 0.028))
+      ctx.fillText('이제 진짜 게임에서 사과를 모아봐요', w / 2, h * 0.430)
+      ctx.fillStyle = '#f0c040'
+      ctx.font = font(KR, Math.round(w * 0.026))
+      ctx.fillText('사과 3개 = 토스포인트 3원!', w / 2, h * 0.490)
+      this._btn(w / 2, h * 0.710, w * 0.70, 54, '단계 1 시작하기', '#1a6a2e')
+      return
+    }
+
     ctx.fillStyle = C.gold
     ctx.font = font(KR, Math.round(w * 0.12))
     ctx.fillText('클리어!', w / 2, h * 0.255)
@@ -125,13 +152,13 @@ export class Renderer {
     ctx.fillText(`단계 ${level} 완료!`, w / 2, h * 0.350)
 
     if (!isFinalStage) {
-      // 단계 1 & 2: 다음 단계 배지 + 포인트 표시 + 티저 + 다음 단계 버튼
       this._levelBadge(w / 2, h * 0.425, level + 1, true)
 
-      if (lastEarned > 0) {
+      // P1-B: animated countup display
+      if (displayEarned > 0) {
         ctx.fillStyle = '#50ff80'
         ctx.font = font(KR, Math.round(w * 0.060))
-        ctx.fillText(`사과 +${lastEarned}개 획득!`, w / 2, h * 0.513)
+        ctx.fillText(`사과 +${displayEarned}개 획득!`, w / 2, h * 0.513)
       } else {
         ctx.fillStyle = '#a0d890'
         ctx.font = font(KR, Math.round(w * 0.032))
@@ -147,11 +174,10 @@ export class Renderer {
 
       this._btn(w / 2, h * 0.710, w * 0.70, 54, `▶  단계 ${level + 1} 시작`, '#1a6a2e')
     } else {
-      // 단계 3: 포인트 표시 + 수확 완료 버튼 + 교환하기 버튼
-      if (lastEarned > 0) {
+      if (displayEarned > 0) {
         ctx.fillStyle = '#50ff80'
         ctx.font = font(KR, Math.round(w * 0.060))
-        ctx.fillText(`사과 +${lastEarned}개 획득!`, w / 2, h * 0.450)
+        ctx.fillText(`사과 +${displayEarned}개 획득!`, w / 2, h * 0.450)
       } else {
         ctx.fillStyle = '#a0d890'
         ctx.font = font(KR, Math.round(w * 0.032))
@@ -161,8 +187,8 @@ export class Renderer {
       ctx.font = font(KR, Math.round(w * 0.030))
       ctx.fillText(`가진 사과 ${totalPoints}개  ·  오늘 ${todayEarned}개 획득`, w / 2, h * 0.508)
 
-      this._btn(w / 2, h * 0.615, w * 0.70, 54, '🎉  오늘 수확 완료!', '#4a2a7a')
-      this._btn(w / 2, h * 0.730, w * 0.72, 52, '💸  토스 포인트로 교환하기', '#1a4a7a')
+      this._btn(w / 2, h * 0.615, w * 0.70, 54, '오늘 수확 완료!', '#4a2a7a')
+      this._btn(w / 2, h * 0.730, w * 0.72, 52, '토스 포인트로 교환하기', '#1a4a7a')
     }
   }
 
@@ -217,39 +243,58 @@ export class Renderer {
     }
   }
 
-  drawDailyLimit(w, h, totalPoints, canWithdrawFlag) {
+  drawDailyLimit(w, h, totalPoints, canWithdrawFlag, countdownStr = '', todayEarned = 0) {
     const { ctx } = this
     this._drawBg(w, h)
     ctx.fillStyle = 'rgba(0,0,0,0.65)'
     ctx.fillRect(0, 0, w, h)
-    this._panel(w * 0.06, h * 0.15, w * 0.88, h * 0.68)
+    this._panel(w * 0.06, h * 0.12, w * 0.88, h * 0.72)
 
     ctx.textAlign = 'center'
     ctx.fillStyle = C.gold
-    ctx.font = font(KR, Math.round(w * 0.10))
-    ctx.fillText('오늘 수확 완료!', w / 2, h * 0.285)
+    ctx.font = font(KR, Math.round(w * 0.09))
+    ctx.fillText('오늘 수확 완료!', w / 2, h * 0.255)
 
     ctx.fillStyle = C.green
-    ctx.font = font(KR, Math.round(w * 0.040))
-    ctx.fillText('오늘 사과 9개를 모았어요 🍎', w / 2, h * 0.365)
+    ctx.font = font(KR, Math.round(w * 0.038))
+    ctx.fillText(`오늘 사과 ${todayEarned}개 획득`, w / 2, h * 0.330)
 
     ctx.fillStyle = C.gold
-    ctx.font = font(KR, Math.round(w * 0.055))
-    ctx.fillText(`가진 사과 ${totalPoints}개`, w / 2, h * 0.455)
+    ctx.font = font(KR, Math.round(w * 0.052))
+    ctx.fillText(`가진 사과 ${totalPoints}개`, w / 2, h * 0.415)
 
-    ctx.fillStyle = '#a0d890'
-    ctx.font = font(KR, Math.round(w * 0.030))
-    ctx.fillText('자정이 지나면 다시 도전할 수 있어요', w / 2, h * 0.525)
+    // P2-A: KST midnight countdown
+    if (countdownStr) {
+      ctx.fillStyle = '#a0d890'
+      ctx.font = font(KR, Math.round(w * 0.027))
+      ctx.fillText('다음 도전까지', w / 2, h * 0.480)
+      ctx.fillStyle = '#70ffb0'
+      ctx.font = font(MN, Math.round(w * 0.062))
+      ctx.fillText(countdownStr, w / 2, h * 0.548)
+    }
 
     if (canWithdrawFlag) {
-      this._btn(w / 2, h * 0.625, w * 0.65, 52, '💸  출금하기', '#1a4a7a')
+      this._btn(w / 2, h * 0.635, w * 0.65, 52, '출금하기', '#1a4a7a')
       this._btn(w / 2, h * 0.730, w * 0.55, 44, '확인', '#2a4030')
     } else {
       const needed = 9 - totalPoints
       ctx.fillStyle = '#80b8a0'
-      ctx.font = font(KR, Math.round(w * 0.028))
-      ctx.fillText(`사과 ${needed}개 더 모으면 출금할 수 있어요`, w / 2, h * 0.588)
+      ctx.font = font(KR, Math.round(w * 0.026))
+      ctx.fillText(`사과 ${needed}개 더 모으면 출금할 수 있어요`, w / 2, h * 0.604)
       this._btn(w / 2, h * 0.685, w * 0.55, 48, '확인', '#2a4030')
+    }
+  }
+
+  // P1-A/B: draw pixel particles (apple pickup + WIN stars)
+  drawParticles(particles) {
+    const { ctx } = this
+    for (const p of particles) {
+      if (p.life <= 0) continue
+      ctx.save()
+      ctx.globalAlpha = Math.min(1, p.life)
+      ctx.fillStyle = p.color
+      ctx.fillRect(Math.round(p.x - p.r / 2), Math.round(p.y - p.r / 2), p.r, Math.ceil(p.r * 0.7))
+      ctx.restore()
     }
   }
 
@@ -744,17 +789,36 @@ export class Renderer {
     ctx.fillRect(0, 3, w, 3)
 
     ctx.textAlign = 'center'
-    ctx.fillStyle = '#70ffb0'
+    ctx.fillStyle = state.isTutorial ? '#50e890' : '#70ffb0'
     ctx.font = font(KR, 13)
-    ctx.fillText('사과 3개를 모아라!', w / 2, 25)
+    ctx.fillText(state.isTutorial ? '연습 단계 — AI가 멈춰있어요!' : '사과 3개를 모아라!', w / 2, 25)
 
+    // P2-B: pixel apple slot display with pop flash
     const player = state.players.find(p => p.type === 'player')
     if (player) {
-      ctx.fillStyle = C.pPlayer
-      ctx.font = font(KR, 12)
-      ctx.textAlign = 'left'
-      ctx.fillText(`나:${player.base.bottleCount}/3`, 12, 25)
+      const count = player.base.bottleCount
+      const pop = (state.hudPopTimer || 0) > 0
+      const sz = 14, gap = 5, startX = 10, sy = 13
+      for (let i = 0; i < 3; i++) {
+        const sx = startX + i * (sz + gap)
+        if (i < count) {
+          const isLatest = pop && i === count - 1
+          ctx.fillStyle = C.black
+          ctx.fillRect(sx - 1, sy - 1, sz + 2, sz + 2)
+          ctx.fillStyle = isLatest ? '#ff8080' : C.aRed
+          ctx.fillRect(sx, sy, sz, sz)
+          ctx.fillStyle = isLatest ? '#ffb0b0' : C.aRedLt
+          ctx.fillRect(sx, sy, Math.ceil(sz * 0.5), Math.ceil(sz * 0.5))
+        } else {
+          ctx.fillStyle = '#1a3828'
+          ctx.fillRect(sx, sy, sz, sz)
+          ctx.fillStyle = '#28504a'
+          ctx.fillRect(sx, sy, sz, 2)
+          ctx.fillRect(sx, sy, 2, sz)
+        }
+      }
     }
+
     ctx.textAlign = 'right'
     ctx.fillStyle = C.gold
     ctx.font = font(KR, 12)

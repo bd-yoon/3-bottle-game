@@ -14,9 +14,9 @@ const BOTTLE_COUNT = 5
 const GAME_STATES = {
   TITLE: 'title',
   PLAYING: 'playing',
-  WIN: 'win',           // 승리 → 포인트 적립 + 다음 단계
-  LOSE: 'lose',         // 패배 → 광고 or 타이틀 복귀
-  DAILY_LIMIT: 'daily_limit',  // 일일 한도 달성 → 플레이 차단
+  WIN: 'win',
+  LOSE: 'lose',
+  DAILY_LIMIT: 'daily_limit',
 }
 
 export class Game {
@@ -27,11 +27,23 @@ export class Game {
     this._state = GAME_STATES.TITLE
     this._level = pointManager.getTodayStage()
     this._winner = null
-    this._adLoading = false   // 광고 로딩 중 플래그
-    this._lastEarned = 0      // 마지막 승리에서 적립한 포인트
-    this._showWithdrawModal = false  // 출금 모달 표시 플래그
+    this._adLoading = false
+    this._lastEarned = 0
+    this._showWithdrawModal = false
     this._rafId = null
     this._lastTime = 0
+
+    // P1-A: apple pickup particles
+    this._particles = []
+    // P1-B: WIN screen star particles + countup
+    this._winParticles = []
+    this._winCountupTarget = 0
+    this._winCountupStart = 0
+    // P2-B: HUD apple slot pop animation
+    this._hudPopTimer = 0
+    // P3: tutorial mode for first-time visitors
+    this._isTutorial = !localStorage.getItem('3bottle_tutorial_done')
+    this._tutorialJustWon = false
 
     this.sound = new SoundManager()
 
@@ -52,7 +64,6 @@ export class Game {
     const h = this.canvas.height
     const diff = getDifficultyParams(level)
 
-    // ── 정삼각형 베이스 좌표 계산 ────────────────────────────────────────────
     const cx = w / 2
     const cy = h * 0.42
     const R = Math.min(w * 0.42, h * 0.27)
@@ -64,12 +75,10 @@ export class Game {
     const a1Bx = cx - R * SIN60, a1By = cy - R * COS60
     const a2Bx = cx + R * SIN60, a2By = cy - R * COS60
 
-    // ── Bases ────────────────────────────────────────────────────────────────
     const playerBase = new Base({ x: pBx,  y: pBy,  radius: baseRadius, owner: 'player', color: '#f9a8d4', label: '카피바라' })
     const ai1Base    = new Base({ x: a1Bx, y: a1By, radius: baseRadius, owner: 'ai1',    color: '#a5b4fc', label: '팬더' })
     const ai2Base    = new Base({ x: a2Bx, y: a2By, radius: baseRadius, owner: 'ai2',    color: '#fde68a', label: '골댕이' })
 
-    // ── Players ──────────────────────────────────────────────────────────────
     const bounds = { w, h }
 
     this.playerEntity = new Player({ x: pBx, y: pBy, type: 'player', base: playerBase, color: '#f9a8d4', label: '카피바라', emoji: '🦫' })
@@ -84,7 +93,6 @@ export class Game {
     this.players = [this.playerEntity, ai1, ai2]
     this.bases   = [playerBase, ai1Base, ai2Base]
 
-    // ── Bottles ──────────────────────────────────────────────────────────────
     this.bottles = []
     const spreadR = Math.min(w, h) * 0.1
     for (let i = 0; i < BOTTLE_COUNT; i++) {
@@ -97,10 +105,13 @@ export class Game {
 
     this._winner = null
     this._adLoading = false
+    this._particles = []
+    this._winParticles = []
+    this._winCountupTarget = 0
+    this._hudPopTimer = 0
     this.touchInput.clear()
     this._state = GAME_STATES.PLAYING
 
-    // BGM 재시작 (레벨업/재도전 시 끊김 없이)
     this.sound.stopBGM()
     this.sound.startBGM()
   }
@@ -116,24 +127,44 @@ export class Game {
   }
 
   _update(dt) {
+    // P1-A: apple pickup particle physics (every frame)
+    for (const p of this._particles) {
+      p.x += p.vx; p.y += p.vy
+      p.vy += 0.35
+      p.life -= 0.048
+    }
+    this._particles = this._particles.filter(p => p.life > 0)
+
+    // P1-B: WIN star particle physics (every frame)
+    for (const p of this._winParticles) {
+      p.x += p.vx; p.y += p.vy
+      p.vy += 0.12
+      p.life -= 0.016
+    }
+    this._winParticles = this._winParticles.filter(p => p.life > 0)
+
+    // P2-B: HUD pop timer decay
+    if (this._hudPopTimer > 0) this._hudPopTimer = Math.max(0, this._hudPopTimer - dt)
+
     if (this._state !== GAME_STATES.PLAYING) return
 
-    // 득점 감지용 이전 카운트
     const prevCounts = this.bases.map(b => b.bottleCount)
 
-    // 터치 위치 → 플레이어 이동 방향
     const dir = this.touchInput.getDirection(this.playerEntity.x, this.playerEntity.y)
     this.playerEntity.vx = dir.x * SPEED
     this.playerEntity.vy = dir.y * SPEED
 
-    for (const player of this.players) {
+    // P3: freeze AI in tutorial mode
+    const playersToUpdate = this._isTutorial ? [this.playerEntity] : this.players
+    for (const player of playersToUpdate) {
       player.update(dt, this.bottles, this.bases)
     }
 
-    // 플레이어 베이스에 사과가 추가됐으면 득점음
     this.bases.forEach((base, i) => {
       if (base.owner === 'player' && base.bottleCount > prevCounts[i]) {
         this.sound.playScore()
+        this._emitAppleParticles(base)   // P1-A
+        this._hudPopTimer = 0.45          // P2-B: trigger HUD slot pop
       }
     })
 
@@ -143,8 +174,18 @@ export class Game {
         this._state = this._winner.type === 'player' ? GAME_STATES.WIN : GAME_STATES.LOSE
         this.touchInput.clear()
         this.sound.stopBGM()
+
         if (this._state === GAME_STATES.WIN) {
-          this._lastEarned = pointManager.awardWin()
+          if (this._isTutorial) {
+            // P3: tutorial complete — no points, mark done, flag for tutorial WIN screen
+            this._lastEarned = 0
+            localStorage.setItem('3bottle_tutorial_done', '1')
+            this._isTutorial = false
+            this._tutorialJustWon = true
+          } else {
+            this._lastEarned = pointManager.awardWin()
+            this._initWinEffect(this._lastEarned)  // P1-B
+          }
           this.sound.playClear()
         } else {
           this.sound.playGameOver()
@@ -154,25 +195,106 @@ export class Game {
     }
   }
 
+  // P1-A: emit red pixel particles on apple score
+  _emitAppleParticles(base) {
+    const count = 8 + Math.floor(Math.random() * 5)
+    const colors = ['#e83030', '#ff5858', '#ff2020', '#ff8080', '#c01818']
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2
+      const speed = 2 + Math.random() * 4
+      this._particles.push({
+        x: base.x + (Math.random() - 0.5) * base.radius,
+        y: base.y + (Math.random() - 0.5) * base.radius,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 1.5,
+        r: 3 + Math.floor(Math.random() * 4),
+        color: colors[Math.floor(Math.random() * colors.length)],
+        life: 1,
+      })
+    }
+  }
+
+  // P1-B: init WIN star particles + countup animation
+  _initWinEffect(earned) {
+    const cx = this.canvas.width / 2
+    const cy = this.canvas.height * 0.30
+    const colors = ['#fcd34d', '#fde68a', '#ffffff', '#f0c040', '#ffe680']
+    for (let i = 0; i < 20; i++) {
+      const angle = (Math.PI * 2 * i) / 20 + (Math.random() - 0.5) * 0.3
+      const speed = 3 + Math.random() * 6
+      this._winParticles.push({
+        x: cx, y: cy,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 1.5,
+        r: 4 + Math.floor(Math.random() * 4),
+        color: colors[Math.floor(Math.random() * colors.length)],
+        life: 1,
+      })
+    }
+    this._winCountupTarget = earned
+    this._winCountupStart = performance.now()
+  }
+
+  // P1-B: ease-out-cubic countup over 800ms
+  _getWinDisplay() {
+    if (this._winCountupTarget === 0) return 0
+    const t = Math.min((performance.now() - this._winCountupStart) / 800, 1)
+    const eased = 1 - Math.pow(1 - t, 3)
+    return Math.round(eased * this._winCountupTarget)
+  }
+
+  // P2-A: KST midnight countdown string HH:MM:SS
+  _getCountdownStr() {
+    const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000)
+    const totalSec = (24 * 3600) - (kstNow.getUTCHours() * 3600 + kstNow.getUTCMinutes() * 60 + kstNow.getUTCSeconds())
+    const h = Math.floor(totalSec / 3600)
+    const m = Math.floor((totalSec % 3600) / 60)
+    const s = totalSec % 60
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+  }
+
   _render() {
     const w = this.canvas.width
     const h = this.canvas.height
 
     switch (this._state) {
       case GAME_STATES.TITLE:
-        this.renderer.drawTitle(w, h, this._level, pointManager.getTotalPoints(), pointManager.getTodayEarned())
+        this.renderer.drawTitle(w, h, this._level, pointManager.getTotalPoints(), pointManager.getTodayEarned(), this._isTutorial)
         break
       case GAME_STATES.PLAYING:
-        this.renderer.drawGame({ players: this.players, bottles: this.bottles, bases: this.bases, level: this._level })
+        this.renderer.drawGame({
+          players: this.players,
+          bottles: this.bottles,
+          bases: this.bases,
+          level: this._level,
+          hudPopTimer: this._hudPopTimer,   // P2-B
+          isTutorial: this._isTutorial,     // P3
+        })
+        if (this._particles.length) this.renderer.drawParticles(this._particles)  // P1-A
         break
       case GAME_STATES.WIN:
-        this.renderer.drawWin(w, h, this._level, this._lastEarned, pointManager.getTotalPoints(), pointManager.getTodayEarned(), pointManager.canWithdraw(), !pointManager.canEarnToday())
+        this.renderer.drawWin(
+          w, h, this._level,
+          this._getWinDisplay(),              // P1-B: animated countup
+          pointManager.getTotalPoints(),
+          pointManager.getTodayEarned(),
+          pointManager.canWithdraw(),
+          !pointManager.canEarnToday(),
+          this._tutorialJustWon,             // P3
+        )
+        if (this._winParticles.length) this.renderer.drawParticles(this._winParticles)  // P1-B
         break
       case GAME_STATES.LOSE:
         this.renderer.drawLose(w, h, this._level, this._winner, this._adLoading, pointManager.getTotalPoints())
         break
       case GAME_STATES.DAILY_LIMIT:
-        this.renderer.drawDailyLimit(w, h, pointManager.getTotalPoints(), pointManager.canWithdraw())
+        this.renderer.drawDailyLimit(
+          w, h,
+          pointManager.getTotalPoints(),
+          pointManager.canWithdraw(),
+          this._getCountdownStr(),           // P2-A
+          pointManager.getTodayEarned(),
+        )
         break
     }
 
@@ -184,7 +306,6 @@ export class Game {
   // ── 입력 처리 ───────────────────────────────────────────────────────────────
 
   _setupInput() {
-    // ── 터치 이벤트 (모바일) ─────────────────────────────────────────────────
     this.canvas.addEventListener('touchstart', e => {
       e.preventDefault()
       this.sound.init()
@@ -212,7 +333,6 @@ export class Game {
       }
     }, { passive: false })
 
-    // ── 마우스 이벤트 (데스크톱 테스트) ─────────────────────────────────────
     this.canvas.addEventListener('mousedown', e => {
       this.sound.init()
       if (this._state === GAME_STATES.PLAYING) {
@@ -232,7 +352,6 @@ export class Game {
       this.touchInput.clear()
     })
 
-    // ── 클릭 (데스크톱 버튼) ────────────────────────────────────────────────
     this.canvas.addEventListener('click', e => this._handleClick(e))
   }
 
@@ -245,16 +364,13 @@ export class Game {
   }
 
   _handleClick(e) {
-    if (this._adLoading) return   // 광고 로딩 중 버튼 비활성
-
-    // 최초 터치에서 Web Audio 컨텍스트 활성화
+    if (this._adLoading) return
     this.sound.init()
 
     const [px, py] = this._canvasPos(e.clientX, e.clientY)
     const w = this.canvas.width
     const h = this.canvas.height
 
-    // 출금 모달 처리 (최우선)
     if (this._showWithdrawModal) {
       if (this.renderer.hitButton(w / 2, h * 0.585, w * 0.65, 52, px, py)) {
         this.sound.playClick()
@@ -270,27 +386,34 @@ export class Game {
     if (this._state === GAME_STATES.TITLE) {
       if (this.renderer.hitButton(w / 2, h * 0.765, w * 0.62, 52, px, py)) {
         this.sound.playClick()
-        if (!pointManager.canEarnToday()) {
+        if (!pointManager.canEarnToday() && !this._isTutorial) {
           this._state = GAME_STATES.DAILY_LIMIT
         } else {
           this._startGame(this._level)
         }
       }
     } else if (this._state === GAME_STATES.WIN) {
+      // P3: tutorial just completed — single button goes to TITLE
+      if (this._tutorialJustWon) {
+        if (this.renderer.hitButton(w / 2, h * 0.710, w * 0.70, 54, px, py)) {
+          this.sound.playClick()
+          this._tutorialJustWon = false
+          this._level = pointManager.getTodayStage()
+          this._state = GAME_STATES.TITLE
+        }
+        return
+      }
       const isFinalStage = this._level >= 3 || !pointManager.canEarnToday()
       if (!isFinalStage) {
-        // 단계 1 & 2: 다음 단계 시작 버튼 (h*0.710)
         if (this.renderer.hitButton(w / 2, h * 0.710, w * 0.70, 54, px, py)) {
           this.sound.playClick()
           this._startGame(this._level + 1)
         }
       } else {
-        // 단계 3: 수확 완료 버튼 (h*0.615)
         if (this.renderer.hitButton(w / 2, h * 0.615, w * 0.70, 54, px, py)) {
           this.sound.playClick()
           this._state = GAME_STATES.DAILY_LIMIT
         }
-        // 토스 포인트로 교환하기 버튼 (h*0.730)
         if (this.renderer.hitButton(w / 2, h * 0.730, w * 0.72, 52, px, py)) {
           this.sound.playClick()
           if (pointManager.canWithdraw()) {
@@ -302,12 +425,10 @@ export class Game {
         }
       }
     } else if (this._state === GAME_STATES.LOSE) {
-      // 광고 보고 다시 도전
       if (this.renderer.hitButton(w / 2, h * 0.65, w * 0.80, 52, px, py)) {
         this.sound.playClick()
         this._handleAdRetry()
       }
-      // 그냥 돌아가기 (레벨 유지)
       if (this.renderer.hitButton(w / 2, h * 0.765, w * 0.62, 44, px, py)) {
         this.sound.playClick()
         this._state = GAME_STATES.TITLE
@@ -336,9 +457,8 @@ export class Game {
     const watched = await showRewardedAd()
     this._adLoading = false
     if (watched) {
-      this._startGame(this._level)   // 같은 레벨 재도전
+      this._startGame(this._level)
     }
-    // 광고 스킵/실패 시 LOSE 화면 유지
   }
 
   // ── 리사이즈 ────────────────────────────────────────────────────────────────
