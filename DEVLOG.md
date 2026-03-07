@@ -660,3 +660,106 @@ Vercel URL 업데이트
 - WIN 처리: `_tutorialJustWon = true` 설정 → "연습 완료!" 전용 화면 표시
 - 완료: `localStorage.setItem('3bottle_tutorial_done', '1')` 저장 → 이후 레벨 1부터 시작
 - `Renderer.js`: 튜토리얼 WIN 화면 분기 + TITLE 화면 힌트 텍스트 표시
+
+---
+
+## 12. 난이도 밸런싱 + 사과 소멸 + 버그 수정 (2026-03-07)
+
+**커밋들**: `9e76704` ~ `2313c9c`
+
+### 난이도 조정 (AIPlayer.js)
+- 단계 1/2를 대폭 쉽게, 단계 3을 더 어렵게 조정 (반복 튜닝)
+- 최종 파라미터:
+
+| 파라미터 | 단계 1 | 단계 2 | 단계 3 |
+|---------|--------|--------|--------|
+| thinkInterval | 0.50s | 0.35s | 0.20s |
+| stealWeight | 0.01 | 0.02 | 0.10 |
+| playerHarassWeight | 0.005 | 0.03 | 0.15 |
+
+- 핵심 결정: `speedMult`는 전 레벨 1.0 고정, 난이도는 반응속도와 공격성으로만 조절
+
+### 당일 사과 소멸 시스템 (pointManager.js)
+- KST 00시 기준 잔고 리셋 (`resetDailyIfNeeded`에서 POINTS도 0으로 초기화)
+- 당일 9개 달성해야만 출금 가능 (`canWithdraw = getTodayEarned() >= 9`)
+- 매일 단계 1부터 재시작 (어뷰징 방지: 1단계만 반복해서 사과 축적 불가)
+
+### 사과 사라짐 버그 수정 (Player.js)
+- **원인**: 플레이어가 자기 진영 사과를 픽업→드롭 반복 시 `removeBottle()`이 배열 인덱스를 변경하고 `addBottle()`이 새 인덱스 기반으로 위치 재계산 → 사과들이 같은 좌표에 겹침
+- **수정**: `if (bottle.base === this.base) continue` — 자기 진영 사과는 픽업하지 않음
+
+### UI 레이아웃 개선 (Renderer.js, Game.js)
+- 타이틀 패널 확장 (h*0.12 ~ h*0.84), 하단 여백 28%→17% 개선
+- "단계1" 배지 제거 (불필요한 UI 요소)
+- "모은 사과는 내일이 되면 사라져요" 문구를 LOSE/WIN(최종)/DAILY_LIMIT 화면에 표시
+- 카운트다운 자연어 형식 ("X시간 Y분")
+
+---
+
+## 13. 서버사이드 교환 어뷰징 방어 (2026-03-08)
+
+**커밋**: `6cfd0b2`
+
+### 문제
+- 포인트 시스템이 100% localStorage → DevTools에서 조작 가능
+- `awardWin()` 콘솔 직접 호출로 무한 포인트 적립 가능
+- 출금 기능은 mock (`window.alert`)
+
+### 구현: Vercel Serverless + Supabase
+spoon-forge-point의 `EXCHANGE_GUARD.md` 패턴을 동일 적용.
+
+**신규 파일:**
+- `api/exchange.js` — Vercel Serverless 교환 API (고정 9원, app_id='3bottle')
+- `src/utils/userId.js` — 디바이스 UUID (Toss userKey 폴백)
+- `src/utils/exchangeApi.js` — fetch 래퍼 (성공/에러/네트워크 처리)
+- `vercel.json` — 빌드 설정 + 캐시 방지 헤더
+
+**Supabase 스키마:**
+```sql
+ALTER TABLE exchange_log ADD COLUMN app_id TEXT NOT NULL DEFAULT 'spoon-forge-point';
+CREATE UNIQUE INDEX idx_exchange_app_user_date ON exchange_log(app_id, user_key, kst_date);
+```
+- 기존 `exchange_log` 테이블 재활용, `app_id` 컬럼으로 앱별 분리
+- unique index로 일일 1회 교환 제한 + race condition 방어
+
+**프론트엔드:**
+- `pointManager.js`: `markExchanged()`, `hasExchangedToday()` 추가
+- `Game.js`: mock alert → async 교환 플로우 (`_exchangeState` 상태 머신)
+- `Renderer.js`: 출금 모달 loading/success/error 상태별 UI
+
+**Vercel 환경변수:** `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` 설정 완료
+
+### PO 결정사항
+- 9사과 = 토스포인트 9원 (고정 금액)
+- 앱별 분리: spoon-forge-point와 three-bottle-game 각각 하루 1회 교환 가능
+
+---
+
+## 14. LOSE 무료 재시도 루프 차단 (2026-03-08)
+
+**커밋**: `6cfd0b2` (위와 동일 커밋에 포함)
+
+### 문제
+Game Over 시 "돌아가기 (레벨 유지)" → TITLE → "사과줍기"로 같은 레벨 무한 무료 재시도 가능. 광고 시청 동기가 사라지는 수익화 구멍.
+
+### 수정
+- LOSE 화면에서 "돌아가기 (레벨 유지)" 버튼 삭제
+- "광고 보고 다시 도전" 버튼 1개만 유지
+- 광고 시청 성공 → 현재 레벨 즉시 재시도
+- 광고 스킵/실패 → LOSE 화면 그대로 유지 (기존 `_handleAdRetry` 동작)
+
+---
+
+## 15. 자정 후 레벨 리셋 버그 수정 (2026-03-08)
+
+**커밋**: `6cfd0b2` (위와 동일 커밋에 포함)
+
+### 문제
+00시 지난 뒤 재접속 시 단계 3에서 시작, 클리어 시 "다음: 단계 4" 표시
+
+### 원인
+`this._level`이 Game 생성 시 한 번만 설정되고, TITLE 복귀 시 갱신되지 않는 경로가 존재
+
+### 수정
+모든 TITLE 진입 경로 + 게임 시작 시 `this._level = pointManager.getTodayStage()` 호출.
+자정 후 `getTodayEarned()=0` → `getTodayStage()=1` → 단계 1부터 정상 시작
