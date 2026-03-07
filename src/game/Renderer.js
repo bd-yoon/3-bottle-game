@@ -58,21 +58,21 @@ export class Renderer {
   drawTitle(w, h, level, totalPoints, todayEarned, isTutorial = false) {
     const { ctx } = this
     this._drawBg(w, h)
-    this._panel(w * 0.06, h * 0.10, w * 0.88, h * 0.65)
+    this._panel(w * 0.06, h * 0.12, w * 0.88, h * 0.72)
 
     ctx.textAlign = 'center'
     ctx.fillStyle = C.gold
     ctx.font = font(KR, Math.round(w * 0.10))
-    ctx.fillText('사과는 다 내꺼!', w / 2, h * 0.235)
+    ctx.fillText('사과는 다 내꺼!', w / 2, h * 0.255)
 
     // 포인트 현황
     ctx.fillStyle = C.gold
     ctx.font = font(KR, Math.round(w * 0.038))
     ctx.textAlign = 'center'
-    ctx.fillText(`가진 사과 : ${totalPoints}개`, w / 2, h * 0.305)
+    ctx.fillText(`가진 사과 : ${totalPoints}개`, w / 2, h * 0.325)
     ctx.fillStyle = '#a0d890'
     ctx.font = font(KR, Math.round(w * 0.028))
-    ctx.fillText(`오늘 ${todayEarned}개 획득`, w / 2, h * 0.348)
+    ctx.fillText(`오늘 ${todayEarned}개 획득`, w / 2, h * 0.368)
 
     const chars = [
       { type: 'ai1',    label: '팬더',    col: C.pAI1   },
@@ -82,7 +82,7 @@ export class Renderer {
     const sp = w / 4
     chars.forEach((c, i) => {
       const cx = sp * (i + 1)
-      const cy = h * 0.445
+      const cy = h * 0.465
       const r  = Math.round(w * 0.065)
       this._pxFrame(cx - r - 3, cy - r - 3, (r + 3) * 2, (r + 3) * 2, c.col)
       if (c.type === 'player')   this._drawCapybara(ctx, cx, cy, r, false)
@@ -97,22 +97,22 @@ export class Renderer {
     ctx.fillStyle = '#c8f0a8'
     ctx.font = font(KR, Math.round(w * 0.025))
     ctx.textAlign = 'center'
-    ctx.fillText('카피바라를 이동해 사과를 집어 내 진영으로!', w / 2, h * 0.575)
+    ctx.fillText('카피바라를 이동해 사과를 집어 내 진영으로!', w / 2, h * 0.595)
 
     ctx.fillStyle = '#a0d890'
     ctx.font = font(KR, Math.round(w * 0.027))
     ctx.textAlign = 'center'
-    ctx.fillText('단계를 깰 때마다 사과 3개를 얻어요. 사과 1개는 토스포인트 1원이에요', w / 2, h * 0.622)
+    ctx.fillText('단계를 깰 때마다 사과 3개를 얻어요. 사과 1개는 토스포인트 1원이에요', w / 2, h * 0.642)
 
     // P3: tutorial hint
     if (isTutorial) {
       ctx.fillStyle = '#50e890'
       ctx.font = font(KR, Math.round(w * 0.026))
       ctx.textAlign = 'center'
-      ctx.fillText('처음이세요? 연습 단계로 시작해봐요!', w / 2, h * 0.646)
+      ctx.fillText('처음이세요? 연습 단계로 시작해봐요!', w / 2, h * 0.666)
     }
 
-    this._btn(w / 2, h * 0.720, w * 0.62, 52, '사과 줍기', '#2a6e3a')
+    this._btn(w / 2, h * 0.800, w * 0.62, 52, '사과 줍기', '#2a6e3a')
   }
 
   drawWin(w, h, level, displayEarned, totalPoints, todayEarned, canWithdrawFlag, isFinalStage, tutorialJustWon = false) {
@@ -184,6 +184,11 @@ export class Renderer {
       ctx.fillStyle = '#fcd34d'
       ctx.font = font(KR, Math.round(w * 0.030))
       ctx.fillText(`가진 사과 ${totalPoints}개  ·  오늘 ${todayEarned}개 획득`, w / 2, h * 0.508)
+
+      // 사과 소멸 안내
+      ctx.fillStyle = '#d4c860'
+      ctx.font = font(KR, Math.round(w * 0.021))
+      ctx.fillText('모은 사과는 내일이 되면 사라져요', w / 2, h * 0.555)
 
       this._btn(w / 2, h * 0.615, w * 0.70, 54, '오늘 수확 완료!', '#4a2a7a')
       this._btn(w / 2, h * 0.730, w * 0.72, 52, '토스 포인트로 교환하기', '#1a4a7a')
@@ -277,6 +282,11 @@ export class Renderer {
     }
 
     if (canWithdrawFlag) {
+      // 사과 소멸 안내
+      ctx.fillStyle = '#d4c860'
+      ctx.font = font(KR, Math.round(w * 0.021))
+      ctx.fillText('모은 사과는 내일이 되면 사라져요', w / 2, h * 0.590)
+
       this._btn(w / 2, h * 0.635, w * 0.65, 52, '출금하기', '#1a4a7a')
       this._btn(w / 2, h * 0.730, w * 0.55, 44, '확인', '#2a4030')
     } else {

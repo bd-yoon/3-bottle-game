@@ -415,7 +415,7 @@ export class Game {
     }
 
     if (this._state === GAME_STATES.TITLE) {
-      if (this.renderer.hitButton(w / 2, h * 0.720, w * 0.62, 52, px, py)) {
+      if (this.renderer.hitButton(w / 2, h * 0.800, w * 0.62, 52, px, py)) {
         this.sound.playClick()
         if (!pointManager.canEarnToday() && !this._isTutorial) {
           this._state = GAME_STATES.DAILY_LIMIT
