@@ -15,11 +15,13 @@ export function getDifficultyParams(level) {
   const l = Math.max(1, level)
 
   // ── 스테이지 1/2/3 전용 파라미터 (getTodayStage() 반환값에 대응) ───────────
-  // L1: 거의 멍한 AI — 1단계를 쉽게 깨서 니어미스 압박 유도
-  if (l === 1) return { speedMult: 1.0, thinkInterval: 0.85, stealWeight: 0.01, playerHarassWeight: 0.01 }
-  // L2: 느긋한 AI — 기존 L1 수준
-  if (l === 2) return { speedMult: 1.0, thinkInterval: 0.55, stealWeight: 0.03, playerHarassWeight: 0.05 }
-  // L3: 공격적인 AI — 기존 L3 대비 thinkInterval -41%, steal +76%, harass +85%
+  // thinkInterval은 버벅거림 방지를 위해 L1/L2 모두 0.10s 고정
+  // 난이도 차이는 stealWeight / playerHarassWeight 로만 조절
+  // L1: 공격성 극소 — 중립 사과만 줍고 플레이어 베이스 거의 안 노림
+  if (l === 1) return { speedMult: 1.0, thinkInterval: 0.10, stealWeight: 0.01, playerHarassWeight: 0.01 }
+  // L2: 공격성 소폭 상향 — 가끔 플레이어 베이스 공략 (L1보다 살짝 어려움)
+  if (l === 2) return { speedMult: 1.0, thinkInterval: 0.10, stealWeight: 0.07, playerHarassWeight: 0.15 }
+  // L3: 유지 — thinkInterval 살짝 높아 체감 반응 차이 존재
   if (l === 3) return { speedMult: 1.0, thinkInterval: 0.20, stealWeight: 0.12, playerHarassWeight: 0.20 }
 
   // ── 온보딩 구간 L4~6 (l>3 경우) ──────────────────────────────────────────

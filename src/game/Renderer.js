@@ -111,17 +111,15 @@ export class Renderer {
       ctx.fillStyle = '#50e890'
       ctx.font = font(KR, Math.round(w * 0.026))
       ctx.textAlign = 'center'
-      ctx.fillText('처음이세요? 연습 단계로 시작해봐요!', w / 2, h * 0.720)
+      ctx.fillText('처음이세요? 연습 단계로 시작해봐요!', w / 2, h * 0.716)
     }
 
-    // 사과 소멸 안내 (위트 있는 문구)
-    ctx.fillStyle = '#e8d870'
-    ctx.font = font(KR, Math.round(w * 0.024))
+    // 사과 소멸 안내 — 1줄, 패널 내부(바닥 h*0.75)에 확실히 들어오도록
+    const expiryY = isTutorial ? h * 0.740 : h * 0.718
+    ctx.fillStyle = '#d4c860'
+    ctx.font = font(KR, Math.round(w * 0.022))
     ctx.textAlign = 'center'
-    ctx.fillText('사과 유효기간: 오늘까지!', w / 2, h * 0.732)
-    ctx.fillStyle = '#b0a850'
-    ctx.font = font(KR, Math.round(w * 0.021))
-    ctx.fillText('자정이 지나면 사과가 썩어서 소멸돼요', w / 2, h * 0.756)
+    ctx.fillText('자정이 지나면 사과가 썩어서 소멸돼요', w / 2, expiryY)
 
     this._btn(w / 2, h * 0.790, w * 0.62, 52, '사과 줍기', '#2a6e3a')
   }
