@@ -114,13 +114,6 @@ export class Renderer {
       ctx.fillText('처음이세요? 연습 단계로 시작해봐요!', w / 2, h * 0.716)
     }
 
-    // 사과 소멸 안내 — 1줄, 패널 내부(바닥 h*0.75)에 확실히 들어오도록
-    const expiryY = isTutorial ? h * 0.740 : h * 0.718
-    ctx.fillStyle = '#d4c860'
-    ctx.font = font(KR, Math.round(w * 0.022))
-    ctx.textAlign = 'center'
-    ctx.fillText('자정이 지나면 사과가 썩어서 소멸돼요', w / 2, expiryY)
-
     this._btn(w / 2, h * 0.790, w * 0.62, 52, '사과 줍기', '#2a6e3a')
   }
 
@@ -233,12 +226,17 @@ export class Renderer {
       ctx.fillText(`사과 ${needed}개만 더 모으면 토스포인트로 출금할 수 있어요`, w / 2, h * 0.592)
     }
 
+    // 사과 소멸 안내 — 실패 화면에서만 표시
+    ctx.fillStyle = '#d4c860'
+    ctx.font = font(KR, Math.round(w * 0.021))
+    ctx.fillText('자정이 지나면 사과가 썩어서 소멸돼요', w / 2, h * 0.618)
+
     if (adLoading) {
-      this._btn(w / 2, h * 0.650, w * 0.80, 52, '로딩 중...', '#555')
+      this._btn(w / 2, h * 0.660, w * 0.80, 52, '로딩 중...', '#555')
     } else {
-      this._btn(w / 2, h * 0.650, w * 0.80, 52, '▶  광고 보고 다시 도전', '#a04810')
+      this._btn(w / 2, h * 0.660, w * 0.80, 52, '▶  광고 보고 다시 도전', '#a04810')
     }
-    this._btn(w / 2, h * 0.765, w * 0.62, 44, '돌아가기  (레벨 유지)', '#3a3a60')
+    this._btn(w / 2, h * 0.775, w * 0.62, 44, '돌아가기  (레벨 유지)', '#3a3a60')
 
     if (adLoading) {
       ctx.fillStyle = 'rgba(0,0,0,0.45)'

@@ -45,6 +45,7 @@ export class Player {
     if (!this.carrying) {
       for (const bottle of bottles) {
         if (bottle.state === 'ground' && distance(this, bottle) < PICKUP_RADIUS) {
+          if (bottle.base === this.base) continue  // 자기 진영 사과는 줍지 않음
           this._pickup(bottle)
           break
         }

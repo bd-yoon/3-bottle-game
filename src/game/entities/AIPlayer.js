@@ -18,8 +18,8 @@ export function getDifficultyParams(level) {
   // L1: thinkInterval=0.40s — AI가 충분히 느리게 반응해서 플레이어 사과 훔치기 거의 불가
   //   (0.10s였을 때 중립 사과 소진 후 AI가 즉시 플레이어 베이스 공략 → "사과 사라짐" 현상)
   if (l === 1) return { speedMult: 1.0, thinkInterval: 0.40, stealWeight: 0.01, playerHarassWeight: 0.01 }
-  // L2: thinkInterval=0.20s — L1보다 빠르게 반응, 가끔 플레이어 베이스 공략
-  if (l === 2) return { speedMult: 1.0, thinkInterval: 0.20, stealWeight: 0.07, playerHarassWeight: 0.15 }
+  // L2: L1보다 아주 살짝 빠르고 공격적 — thinkInterval 0.35s, steal/harass 소폭 상승
+  if (l === 2) return { speedMult: 1.0, thinkInterval: 0.35, stealWeight: 0.02, playerHarassWeight: 0.03 }
   // L3: 유지
   if (l === 3) return { speedMult: 1.0, thinkInterval: 0.20, stealWeight: 0.12, playerHarassWeight: 0.20 }
 

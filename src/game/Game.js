@@ -457,11 +457,11 @@ export class Game {
         }
       }
     } else if (this._state === GAME_STATES.LOSE) {
-      if (this.renderer.hitButton(w / 2, h * 0.65, w * 0.80, 52, px, py)) {
+      if (this.renderer.hitButton(w / 2, h * 0.660, w * 0.80, 52, px, py)) {
         this.sound.playClick()
         this._handleAdRetry()
       }
-      if (this.renderer.hitButton(w / 2, h * 0.765, w * 0.62, 44, px, py)) {
+      if (this.renderer.hitButton(w / 2, h * 0.775, w * 0.62, 44, px, py)) {
         this.sound.playClick()
         this._state = GAME_STATES.TITLE
       }
